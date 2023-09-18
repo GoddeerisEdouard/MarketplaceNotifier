@@ -21,7 +21,7 @@ marketplaces:
   [requirements.txt](requirements.txt) contains all Python packages needed.
 
 ```shell
-pip install - r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### Executing program
