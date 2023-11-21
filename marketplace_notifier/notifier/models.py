@@ -38,21 +38,25 @@ class IListingInfo(ABC):
     interface represents all relevant listing info
     """
     id: str
-    _BASE_URL: str
     title: str
     price_info: PriceInfo
     description: str
-    screenshot_path: str
+    screenshot_path: Optional[str]
     posted_date: datetime
     seller_url: str
     specified_location: Location
     vip_url: str
 
+    @property
+    @abstractmethod
+    def BASE_URL(self) -> str:
+        raise NotImplementedError()
+
     def get_full_url(self) -> str:
         """
-        :return: full URL hyperlink to listing
+        :return: full URL hyperlink to listing for user
         """
-        return self._BASE_URL + self.vip_url
+        return self.BASE_URL + self.vip_url
 
 
 @dataclass
@@ -85,11 +89,11 @@ class IListingSpecs(ABC):
     def parse_url(cls, get_request_query_url: str) -> IListingSpecs:
         """
         parses url and returns object of this dataclass
-        ( does the opposite of get_request_url(...) )
+        ( does the opposite of generate_listing_query_url(...) )
         :param get_request_query_url: the url to parse
-        looks like .../q/iphone/#Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING|postcode:9000|searchInTitleAndDescription:true
+        looks like .../q/iphone/#Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING|searchInTitleAndDescription:true
         or
-        .../q/iphone/#Language:all-languages|PriceCentsTo:5000|sortBy:SORT_INDEX|sortOrder:DECREASING|postcode:9000|searchInTitleAndDescription:true
+        .../q/iphone/#Language:all-languages|PriceCentsTo:5000|sortBy:SORT_INDEX|sortOrder:DECREASING|searchInTitleAndDescription:true
         :return: this dataclass, parsed by current url
         """
         raise NotImplementedError()

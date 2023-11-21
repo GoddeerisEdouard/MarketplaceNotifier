@@ -1,9 +1,12 @@
+import json
+import logging
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Type
 
 import aiohttp
 
 from marketplace_notifier.notifier.models import IListingInfo, IListingSpecs
+from marketplace_notifier.utils.api_utils import get_request_response
 
 
 class INotifier(ABC):
@@ -20,20 +23,47 @@ class INotifier(ABC):
     listing_urls_for_requests: List[str] = []
 
     @abstractmethod
+    def _parse_non_ad_listings(self, raw_listings_response) -> List[Optional[IListingInfo]]:
+        """
+        helper method
+        :param raw_listings_response: expected raw data format
+        :return: parsed List of non-ad IListingInfo objects
+        """
+
+        raise NotImplementedError()
+
     async def _parse_listings_from_response(self, client_session: aiohttp.ClientSession, get_req_url: str) -> List[
         Optional[IListingInfo]]:
         """
         helper method
         gets a raw json response with all listings of query & returns IListingInfo objects
         :param client_session: session to use the send GET requests
-        :param get_req_url: exact GET url to request all raw listings json
+        :param get_req_url: GET request url to fetch all raw listings in json
         :return: a (empty) list of IListingInfo objects
         """
-        raise NotImplementedError()
+        response_data = await get_request_response(client_session, get_req_url)
+        data = None
+        try:
+            data = json.loads(response_data)
+        except TypeError:
+            logging.warning(f"Couldn't decode data of url {get_req_url}\n---\ndata:\n{response_data}")
+        except json.JSONDecodeError as e:
+            logging.warning(f"Couldn't decode json for given uri {get_req_url}\n---\ndata:\n{response_data}\n{e}")
+        except Exception as e:
+            logging.warning(f"Unhandled exception: {e}")
 
-    @abstractmethod
-    async def add_new_query(self, listing_specs: IListingSpecs) -> None:
+        # only return listings which aren't ads
+        parsed_non_ad_listings = self._parse_non_ad_listings(data)
+
+        # if there are no non-ad listings found
+        if not parsed_non_ad_listings:
+            logging.debug("no non-ad listings found")
+
+        return parsed_non_ad_listings
+
+    async def _add_new_query(self, listing_specs: Type[IListingSpecs]) -> None:
         """
+        helper method
         adds parsed "listing query"/~listing_specs to notifier lising query list
         :return: None
         """
@@ -41,17 +71,19 @@ class INotifier(ABC):
         request_url = listing_specs.generate_listing_query_url()
 
         # append to query request list to refresh every now & then
+        # TODO: add unique ID for this URL, so we can easily remove it later on
+        # as spoken about in INotifier
         self.listing_urls_for_requests.append(request_url)
 
-    @abstractmethod
-    async def get_listings_of_request_url(self, client_session: aiohttp.ClientSession, query_request_url: str) -> List[
-        IListingInfo]:
+    async def fetch_listings_of_request_url(self, client_session: aiohttp.ClientSession, query_request_url: str) -> \
+            List[
+                IListingInfo]:
         """
-        gets all listings and returns all parsed relevant listing info in a list
+        fetches all listings and returns all parsed relevant listing info in a list
         :param client_session: session to use the send GET requests
         :param query_request_url: exact GET request url used to get all listings
-        :return: parsed listing info as dataclass object
+        :return: list of parsed non-ad listing info objects
         """
 
-        new_listings = await self._parse_listings_from_response(client_session, query_request_url)
-        return new_listings
+        new_non_ad_listings_infos = await self._parse_listings_from_response(client_session, query_request_url)
+        return new_non_ad_listings_infos
