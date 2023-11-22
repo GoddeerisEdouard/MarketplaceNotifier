@@ -42,6 +42,9 @@ class INotifier(ABC):
         :return: a (empty) list of IListingInfo objects
         """
         response_data = await get_request_response(client_session, get_req_url)
+        if response_data is None:
+            logging.warning(f"No response data, here's the request URL you tried:\n{get_req_url}")
+            return []
         data = None
         try:
             data = json.loads(response_data)

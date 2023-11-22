@@ -1,8 +1,6 @@
 import unittest
 
 import aiohttp
-
-from marketplace_notifier.notifier.models import PriceRange
 from marketplace_notifier.notifier.tweedehands.models import TweedehandsLocationFilter, TweedehandsQuerySpecs
 from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
 from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
@@ -12,8 +10,9 @@ class TestTweedehandsNotifier(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.tn = TweedehandsNotifier()
 
-    async def test_car_query_returns_at_least_one_listing(self):
+    async def test_query_returns_at_least_one_listing(self):
         # query expected to not be filled with only ads the first page
+        # BE AWARE of what query to test this with
         # "car" for example does only have ads as response around 12am, hence not that query
         query = "iphone"
 
@@ -35,8 +34,8 @@ class TestTweedehandsNotifier(unittest.IsolatedAsyncioTestCase):
         stad = "brussel"
         radius = 5
 
-
         async with aiohttp.ClientSession() as cs:
+            # without location filter
             query_specs_without_location_filter = TweedehandsQuerySpecs(query=query)
 
             non_ad_listings_without_location_filter = await self.tn.fetch_listings_of_request_url(cs,
@@ -55,3 +54,12 @@ class TestTweedehandsNotifier(unittest.IsolatedAsyncioTestCase):
 
         self.assertGreater(len(non_ad_listings_without_location_filter), len(non_ad_listings_with_location_filter),
                            f"{query_specs_with_location_filter.request_query_url}")
+
+    async def test_empty_query_shouldnt_return_any_listings(self):
+        query = ""
+
+        tqs = TweedehandsQuerySpecs(query=query)
+        async with aiohttp.ClientSession() as cs:
+            non_ad_listings = await self.tn.fetch_listings_of_request_url(cs, tqs.request_query_url)
+
+        self.assertTrue(len(non_ad_listings) == 0, non_ad_listings)

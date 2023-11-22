@@ -25,6 +25,9 @@ async def get_request_response(client_session: aiohttp.ClientSession, URI: str,
     async with client_session.get(URI, headers=headers, ssl=False) as response:
         if response.status == HTTPStatus.OK:
             return await response.text()
+        elif response.status == HTTPStatus.NO_CONTENT:
+            logging.warning(f"Requested URI: {URI} returns no content...")
+            return ""
     logging.warning("Got status code %d on %s, trying again once more", response.status, URI)
 
     async with client_session.get(URI, headers=headers, ssl=False) as response:
