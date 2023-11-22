@@ -1,119 +1,15 @@
-import json
-import re
-import urllib.parse
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List
 
-import pydantic
 import aiohttp
 from bs4 import BeautifulSoup
-from pydantic import BaseModel, Field, field_validator, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, AliasChoices
 
 from marketplace_notifier.utils.api_utils import get_request_response
 
-# Postalcode API related
-BELGIAN_POSTAL_CODE_REGEX = "^[1-9]{1}[0-9]{3}$"
-BELGIAN_CITY_REGEX = "^[A-Za-zÀ-ÿ\\.'*`´’,\\- \"]{1,34}$"
-
-
-class PostalCodeAPIResponseModel(BaseModel):
-    postcode_hoofdgemeente: str
-    naam_hoofdgemeente: str
-    postcode_deelgemeente: str
-    naam_deelgemeente: str
-    taal: str
-    region: str
-    longitude: str
-    latitude: str
-
-    class Config:
-        str_to_lower = True
-
-
-BelgianCityType = pydantic.constr(pattern=BELGIAN_CITY_REGEX)
-
-
-class LocationFilter(BaseModel):
-    """
-    class representing parsed location filters
-    """
-    city: BelgianCityType = Field(..., description="Valid belgian city name")
-    postal_code: int = Field(..., description="Valid belgian postal code")
-    radius: int
-
-    @classmethod
-    async def get_valid_postal_code_and_city(cls, client_session: aiohttp.ClientSession,
-                                             postal_code_or_city: str) -> Optional[dict]:
-        """
-        helper method to get the postal code of a given city or the city of a given postal code
-        city can be either in French or Dutch
-        :param client_session: used to make the GET request for the postal code data
-        :param postal_code_or_city: a postal code or a city (Dutch or French)
-        :return: None if invalid postal_code_or_city, else a dict of  the postal code with its matching city in Dutch
-        """
-
-        postal_code_or_city_normalized = str(postal_code_or_city).lower()
-        # prevent GET requests for invalid postal code / city
-        if not re.match(f"{BELGIAN_CITY_REGEX}|{BELGIAN_POSTAL_CODE_REGEX}", postal_code_or_city_normalized):
-            return
-
-        api_url = f"https://opzoeken-postcode.be/{urllib.parse.quote_plus(postal_code_or_city_normalized)}.json"
-        response = await get_request_response(client_session, api_url)
-        response_json = json.loads(response)
-        if response_json:
-            for postal_code_and_city_model in response_json:
-                postal_code_and_city_model_obj = PostalCodeAPIResponseModel.model_validate(
-                    postal_code_and_city_model["Postcode"])
-
-                # check if any postal code or city matches the given postal code, if it does, return that element
-                if postal_code_and_city_model_obj.postcode_hoofdgemeente == postal_code_or_city_normalized \
-                        or postal_code_and_city_model_obj.postcode_deelgemeente == postal_code_or_city_normalized:
-                    return {"postal_code": int(postal_code_and_city_model_obj.postcode_hoofdgemeente),
-                            "city": postal_code_and_city_model_obj.naam_hoofdgemeente.capitalize()}
-
-                elif postal_code_and_city_model_obj.naam_hoofdgemeente == postal_code_or_city_normalized \
-                        or postal_code_and_city_model_obj.naam_deelgemeente == postal_code_or_city_normalized:
-                    return {"postal_code": int(postal_code_and_city_model_obj.postcode_hoofdgemeente),
-                            "city": postal_code_and_city_model_obj.naam_hoofdgemeente.capitalize()}
-
-    @field_validator("radius")
-    def distance_converter(cls, v: int) -> int:
-        """
-        only allow tweedehands / 2ememain 's GUI distance input values and convert to closest match
-        """
-        RADIUS_LIST = [3, 5, 10, 15, 25, 50, 75]
-        return RADIUS_LIST[min(range(len(RADIUS_LIST)), key=lambda i: abs(RADIUS_LIST[i] - v))]
-
-    @field_validator("postal_code")
-    def belgian_postal_code_validation(cls, v: int) -> int:
-        if not re.match(BELGIAN_POSTAL_CODE_REGEX, str(v)):
-            raise ValueError(f"{v} is not a valid belgian postal code")
-        return v
-
 
 # Tweedehands API related
-class ListingInfo(BaseModel):
-    """
-    class representing parsed (relevant) info to use for API calls
-    """
-    query: str
-    location_filter: Optional[LocationFilter] = None
-
-    @property
-    def query_url(self) -> str:
-        URI = "https://www.2dehands.be/lrp/api/search?attributesByKey[]=Language%3Aall-languages" \
-              f"&attributesByKey[]=offeredSince%3AGisteren&limit=30&offset=0&query={urllib.parse.quote_plus(self.query)}" \
-              "&searchInTitleAndDescription=true&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view"
-        if self.location_filter:
-            URI += f"&distanceMeters={str(self.location_filter.radius * 1000)}&postcode={str(self.location_filter.postal_code)}"
-        return URI
-
-    @classmethod
-    def get_field_names_dict(cls):
-        return dict.fromkeys(cls.__fields__.keys())
-
-
 class PriceTypeEnum(str, Enum):
     """
     represents all possible price types of Listings
@@ -296,10 +192,10 @@ class Listing(BaseModel):
     video_on_vip: bool = Field(..., alias="videoOnVip")
     urgency_feature_active: bool = Field(..., alias="urgencyFeatureActive")
     nap_available: bool = Field(..., alias="napAvailable")
-    attributes: Optional[List[Attribute]]
+    attributes: Optional[List[Attribute]] = Field(..., validation_alias=AliasChoices("attributes", "extendedAttributes"))
     traits: List[TraitEnum]
     verticals: List[str]
-    pictures: Optional[List[Picture]]
+    pictures: Optional[List[Picture]] = None
     vip_url: str = Field(..., alias="vipUrl")
 
     @property

@@ -5,7 +5,7 @@ from typing import List, Optional, Type
 
 import aiohttp
 
-from marketplace_notifier.notifier.models import IListingInfo, IListingSpecs
+from marketplace_notifier.notifier.models import IListingInfo, IQuerySpecs
 from marketplace_notifier.utils.api_utils import get_request_response
 
 
@@ -61,14 +61,14 @@ class INotifier(ABC):
 
         return parsed_non_ad_listings
 
-    async def _add_new_query(self, listing_specs: Type[IListingSpecs]) -> None:
+    async def _add_new_query(self, listing_specs: Type[IQuerySpecs]) -> None:
         """
         helper method
         adds parsed "listing query"/~listing_specs to notifier lising query list
         :return: None
         """
 
-        request_url = listing_specs.generate_listing_query_url()
+        request_url = listing_specs.request_query_url
 
         # append to query request list to refresh every now & then
         # TODO: add unique ID for this URL, so we can easily remove it later on
@@ -77,7 +77,7 @@ class INotifier(ABC):
 
     async def fetch_listings_of_request_url(self, client_session: aiohttp.ClientSession, query_request_url: str) -> \
             List[
-                IListingInfo]:
+                Optional[Type[IListingInfo]]]:
         """
         fetches all listings and returns all parsed relevant listing info in a list
         :param client_session: session to use the send GET requests

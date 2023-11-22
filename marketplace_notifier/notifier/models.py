@@ -7,11 +7,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from marketplace_notifier.postalcode.models import ILocationFilter
+
 
 # NOTE: these classes are used as input / output models when using functions
 
 
-class IPriceType(BaseModel, ABC, Enum):
+class IPriceType(BaseModel, ABC):
     """
     this enum interface represents all price types of a listing
     examples: exact price, bid, not_given
@@ -24,7 +26,7 @@ class PriceInfo(BaseModel, ABC):
     price_cents: int
 
 
-class Location(BaseModel):
+class ListingLocation(BaseModel):
     """
     class representing all Location information of a Listing
     """
@@ -44,7 +46,7 @@ class IListingInfo(ABC):
     screenshot_path: Optional[str]
     posted_date: datetime
     seller_url: str
-    specified_location: Location
+    specified_location: ListingLocation
     vip_url: str
 
     @property
@@ -66,34 +68,41 @@ class PriceRange:
 
 
 @dataclass
-class IListingSpecs(ABC):
+class IQuerySpecs(ABC):
     """
-    listing specifications given by user
+    query specifications given by user
     these will be parsed into a URL to make a GET REQUEST
     """
     query: str
-    location: Location
-    price_range: PriceRange = PriceRange(0, 0)
+    location_filter: Optional[ILocationFilter] = None
+    price_range: Optional[PriceRange] = None
 
+    @property
     @abstractmethod
-    def generate_listing_query_url(self) -> str:
+    def request_query_url(self) -> str:
         """
         generates request URL based on the given attributes
-        ( does the opposite of parse_url(...) )
+        does the opposite of parse_request_url
         :return: a listing query url to use for a GET request
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def browser_query_url(self) -> str:
+        """
+        generates the URL a user can use in his browser to find all listings based on his query
+        :return: url a user can use in his browser
         """
         raise NotImplementedError()
 
     @classmethod
     @abstractmethod
-    def parse_url(cls, get_request_query_url: str) -> IListingSpecs:
+    def parse_request_url(cls, get_request_query_url: str) -> IQuerySpecs:
         """
-        parses url and returns object of this dataclass
-        ( does the opposite of generate_listing_query_url(...) )
+        parses webbrowser url and returns object of this dataclass
+        ( does the opposite of browser_query_url )
         :param get_request_query_url: the url to parse
-        looks like .../q/iphone/#Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING|searchInTitleAndDescription:true
-        or
-        .../q/iphone/#Language:all-languages|PriceCentsTo:5000|sortBy:SORT_INDEX|sortOrder:DECREASING|searchInTitleAndDescription:true
-        :return: this dataclass, parsed by current url
+        :return: this dataclass
         """
         raise NotImplementedError()
