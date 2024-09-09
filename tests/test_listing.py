@@ -1,4 +1,5 @@
 import aiohttp
+import redis.asyncio as redis
 from tortoise.contrib import test
 
 from marketplace_notifier.db_models.models import QueryInfo, ListingInfo
@@ -31,5 +32,8 @@ class TestListingInfo(test.TestCase):
 
         self.assertEqual(await ListingInfo.all().count(), 0)
 
-        await tn.process_listings(request_url_with_listings)
+        redis_client = redis.StrictRedis()
+        await tn.process_listings(request_url_with_listings, redis_client)
+        await redis_client.close()
+
         self.assertGreater(await ListingInfo.all().count(), 0, "no listings added to an empty db")

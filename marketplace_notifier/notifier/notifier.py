@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Type, Set, Dict
 
 import aiohttp
+import redis.asyncio as redis
 
 from marketplace_notifier.db_models.models import QueryInfo, ListingInfo as ListingInfoDB
 from marketplace_notifier.notifier.models import IListingInfo, IQuerySpecs
@@ -100,37 +101,39 @@ class INotifier(ABC):
         """
         # update cached listing_urls
         self.listing_urls_for_requests = set(await QueryInfo.all().values_list("request_url", flat=True))
-        query_url_listings_dict: Dict[str, List[Optional[Type[IListingInfo]]]] = {}
+        logging.info(f'fetching listings for {len(self.listing_urls_for_requests)} query urls...')
+
+        query_url_listing_infos: Dict[str, List[Optional[Type[IListingInfo]]]] = {}
         for request_url in self.listing_urls_for_requests:
             parsed_non_ad_listings = await self._fetch_listings_of_request_url(client_session, request_url)
-            query_url_listings_dict[request_url] = parsed_non_ad_listings
+            query_url_listing_infos[request_url] = parsed_non_ad_listings
 
-        return query_url_listings_dict
+        return query_url_listing_infos
 
-    async def process_listings(self, query_url_listings_dict: Dict[
-        str, List[Optional[Type[IListingInfo]]]]) -> None:
+    async def process_listings(self, query_url_listing_infos: Dict[
+        str, List[Optional[Type[IListingInfo]]]], async_redis_client: redis.client) -> None:
         """
         saves to DB
-        sends NEW listings as a list to subscribers
+        sends new listings to subscribers
         :param non_ad_listings_infos:
         :return:
         """
-        new_parsed_listings = []
-        for query_url, non_ad_listings_infos in query_url_listings_dict.items():
-            logging.info(f"processing {query_url}...")
+        for query_url, non_ad_listings_infos in query_url_listing_infos.items():
+            logging.info(f'processing {query_url}...')
             for parsed_listing_info in non_ad_listings_infos:
                 result = ListingInfoDB.exists(id=parsed_listing_info.id)
                 if result:
                     logging.info(f'new listing found: {parsed_listing_info}')
 
                     # convert parsed_listings to db listinginfo
-                    listing_info_db_obj = ListingInfoDB(id=parsed_listing_info.id, title=parsed_listing_info.title, marketplace=self.marketplace, date=parsed_listing_info.posted_date)
+                    listing_info_db_obj = ListingInfoDB(id=parsed_listing_info.id, title=parsed_listing_info.title,
+                                                        marketplace=self.marketplace,
+                                                        date=parsed_listing_info.posted_date)
                     # save listing in db
                     await listing_info_db_obj.save()
+                    # publish to subscribers
+                    serialized_tweedehands_listing_info = parsed_listing_info.to_json()
+                    await async_redis_client.publish('discord_bot', json.dumps(serialized_tweedehands_listing_info))
 
-                    new_parsed_listings.append(parsed_listing_info)
                 else:
                     logging.info(f'listing already exists: {parsed_listing_info}')
-
-        # send notification with new listings to subscribers
-        # TODO
