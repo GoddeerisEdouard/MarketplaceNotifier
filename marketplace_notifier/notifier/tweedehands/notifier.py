@@ -1,7 +1,6 @@
 import logging
 from typing import List, Optional
 
-
 from marketplace_notifier.notifier.models import IListingInfo, ListingLocation
 from marketplace_notifier.notifier.notifier import INotifier
 from marketplace_notifier.notifier.tweedehands import api_models
@@ -9,6 +8,10 @@ from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsL
 
 
 class TweedehandsNotifier(INotifier):
+
+    @property
+    def marketplace(self) -> str:
+        return "TWEEDEHANDS"
 
     def _parse_non_ad_listings(self, raw_listings_response) -> List[Optional[TweedehandsListingInfo]]:
         """
@@ -30,8 +33,9 @@ class TweedehandsNotifier(INotifier):
             listing = api_models.Listing(**raw_listing)
             if not listing.is_ad():
                 seller_url = str(
-                    TweedehandsListingInfo.BASE_URL) + "/u/" + listing.seller_information.seller_name.lower().replace(".",
-                                                                                                                  "-").replace(
+                    TweedehandsListingInfo.BASE_URL) + "/u/" + listing.seller_information.seller_name.lower().replace(
+                    ".",
+                    "-").replace(
                     " ", "-").replace("'", "-").replace("é", "e") + "/" + str(
                     listing.seller_information.seller_id)
 
@@ -43,11 +47,10 @@ class TweedehandsNotifier(INotifier):
                                            price_info=listing.price_info,
                                            description=listing.description,
                                            screenshot_path=None,
-                                           posted_date=None,
+                                           posted_date=listing.date,
                                            seller_url=seller_url,
                                            specified_location=ListingLocation(cityName=listing.location.city_name,
-                                                                          countryName=listing.location.country_name),
+                                                                              countryName=listing.location.country_name),
                                            vip_url=listing.vip_url))
 
         return parsed_non_ad_tweedehands_listings
-

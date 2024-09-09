@@ -1,10 +1,11 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Set, Dict
 
 import aiohttp
 
+from marketplace_notifier.db_models.models import QueryInfo, ListingInfo as ListingInfoDB
 from marketplace_notifier.notifier.models import IListingInfo, IQuerySpecs
 from marketplace_notifier.utils.api_utils import get_request_response
 
@@ -13,14 +14,16 @@ class INotifier(ABC):
     """
     interface of marketplace notifier
     """
-    # TODO: add unique ID to every element in this list to be able to easily remove them
-    # (maybe based on name or something, just a generated name, can be the vip url too)
-    # the request url is not enough, as it looks different for the developer than for the user
-    # these urls are to fetch ALL listings of a specific spec
-    # example:
-    # browser URL req: .../q/nintendo+switch
-    # GET req URL: .../lrp/api/search?attributesByKey[]=Language%3Aall-languages&limit=30&offset=0&query=nintendo%20switch&searchInTitleAndDescription=true&viewOptions=list-view
-    listing_urls_for_requests: List[str] = []
+    # looks like {"req_url1", "req_url2", ...}
+    listing_urls_for_requests: Set[str] = {}
+
+    @property
+    @abstractmethod
+    def marketplace(self) -> str:
+        """
+        :return: name of marketplace
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def _parse_non_ad_listings(self, raw_listings_response) -> List[Optional[IListingInfo]]:
@@ -64,21 +67,18 @@ class INotifier(ABC):
 
         return parsed_non_ad_listings
 
-    async def _add_new_query(self, listing_specs: Type[IQuerySpecs]) -> None:
+    async def add_new_query(self, listing_specs: Type[IQuerySpecs]) -> None:
         """
         helper method
-        adds parsed "listing query"/~listing_specs to notifier lising query list
+        inserts new request url in DB
+        when fetching new queries, the new_request_url will be updated
         :return: None
         """
 
         request_url = listing_specs.request_query_url
+        await QueryInfo.create(request_url=request_url, marketplace=self.marketplace, query=listing_specs.query)
 
-        # append to query request list to refresh every now & then
-        # TODO: add unique ID for this URL, so we can easily remove it later on
-        # as spoken about in INotifier
-        self.listing_urls_for_requests.append(request_url)
-
-    async def fetch_listings_of_request_url(self, client_session: aiohttp.ClientSession, query_request_url: str) -> \
+    async def _fetch_listings_of_request_url(self, client_session: aiohttp.ClientSession, query_request_url: str) -> \
             List[
                 Optional[Type[IListingInfo]]]:
         """
@@ -90,3 +90,47 @@ class INotifier(ABC):
 
         new_non_ad_listings_infos = await self._parse_listings_from_response(client_session, query_request_url)
         return new_non_ad_listings_infos
+
+    async def fetch_all_query_urls(self, client_session: aiohttp.ClientSession) -> Dict[
+        str, List[Optional[Type[IListingInfo]]]]:
+        """
+        fetches the listings of all query urls
+        :param client_session: session to use the send GET requests
+        :return: None
+        """
+        # update cached listing_urls
+        self.listing_urls_for_requests = set(await QueryInfo.all().values_list("request_url", flat=True))
+        query_url_listings_dict: Dict[str, List[Optional[Type[IListingInfo]]]] = {}
+        for request_url in self.listing_urls_for_requests:
+            parsed_non_ad_listings = await self._fetch_listings_of_request_url(client_session, request_url)
+            query_url_listings_dict[request_url] = parsed_non_ad_listings
+
+        return query_url_listings_dict
+
+    async def process_listings(self, query_url_listings_dict: Dict[
+        str, List[Optional[Type[IListingInfo]]]]) -> None:
+        """
+        saves to DB
+        sends NEW listings as a list to subscribers
+        :param non_ad_listings_infos:
+        :return:
+        """
+        new_parsed_listings = []
+        for query_url, non_ad_listings_infos in query_url_listings_dict.items():
+            logging.info(f"processing {query_url}...")
+            for parsed_listing_info in non_ad_listings_infos:
+                result = ListingInfoDB.exists(id=parsed_listing_info.id)
+                if result:
+                    logging.info(f'new listing found: {parsed_listing_info}')
+
+                    # convert parsed_listings to db listinginfo
+                    listing_info_db_obj = ListingInfoDB(id=parsed_listing_info.id, title=parsed_listing_info.title, marketplace=self.marketplace, date=parsed_listing_info.posted_date)
+                    # save listing in db
+                    await listing_info_db_obj.save()
+
+                    new_parsed_listings.append(parsed_listing_info)
+                else:
+                    logging.info(f'listing already exists: {parsed_listing_info}')
+
+        # send notification with new listings to subscribers
+        # TODO

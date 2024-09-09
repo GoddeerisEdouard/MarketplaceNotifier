@@ -7,6 +7,4 @@ class TweedehandsListingInfo(IListingInfo):
     id: str = Field(max_length=11)
     title: str = Field(max_length=60)
 
-    @property
-    def BASE_URL(self) -> str:
-        return "https://www.2dehands.be"
+    BASE_URL = "https://www.2dehands.be"
