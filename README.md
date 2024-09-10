@@ -1,3 +1,5 @@
+from re import split
+
 # MarketplaceNotifier
 
 monitor and get notified for your queried marketplace listings  
@@ -86,6 +88,7 @@ in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact
 
 ```python
 import redis.asyncio as redis
+# this import might differ
 from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
 
 from discord.ext import tasks, commands
@@ -96,7 +99,7 @@ class MyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.redis_client = redis.StrictRedis()
-        self.redis_channel = 'discord_bot'
+        self.redis_channel = 'listings'
         self.bot.loop.create_task(self.new_listing_reader())
 
 
@@ -112,9 +115,12 @@ async def new_listing_reader(self):
             message = await channel.get_message(ignore_subscribe_messages=True)
             if message is not None:
                 data = msg['data'].decode('utf-8')
-                if data.startswith('NEW_LISTING'):
-                    serialized_new_tweedehands_listing_info = data[len('NEW_LISTING '):]
-                    new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing)
+                splitted_data = data.split(' ')
+                if splitted_data[0] == 'NEW':
+                    # NEW <request_url> <serialized TweedehandsListingInfo object>
+                    query_url = splitted_data[1]
+                    serialized_tweedehands_listing_info = " ".join(splitted_data[2:])
+                    new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing_info)
 
                     # do something with the new_tweedehands_listing_info
                     # ...
@@ -125,7 +131,8 @@ async def new_listing_reader(self):
 queries to be monitored are stored in a DB.  
 This is to cache already seen listings and update when new ones arrive.
 
-new listings are sent with Redis to the `'discord_bot'` channel.
+new listings are sent with Redis to the `'listings'` channel.  
+in format `"NEW <request_url> <serialized TweedehandsListingInfo object>"`
 
 in the redis pubsub `commands` channel, you can send commands:
 > **Adding** queries:

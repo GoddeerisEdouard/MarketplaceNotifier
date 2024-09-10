@@ -133,7 +133,9 @@ class INotifier(ABC):
                     await listing_info_db_obj.save()
                     # publish to subscribers
                     serialized_tweedehands_listing_info = parsed_listing_info.to_json()
-                    await async_redis_client.publish('discord_bot', 'NEW_LISTING ' + json.dumps(serialized_tweedehands_listing_info))
+                    command = "NEW"
+                    msg = " ".join([command, query_url, serialized_tweedehands_listing_info])
+                    await async_redis_client.publish('listings', msg)
 
                 else:
                     logging.info(f'listing already exists: {parsed_listing_info}')
