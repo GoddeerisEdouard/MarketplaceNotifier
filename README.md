@@ -15,8 +15,12 @@ marketplaces:
 * [Getting Started](#getting-started)
     + [Installing](#installing)
     + [Executing program](#executing-program)
+* [Implementation](#implementation)
+    * [commands](#commands)
+    * [discord bot](#discord-bot)
 * [FYI](#fyi)
 * [Help](#help)
+
 
 ## Getting Started
 
@@ -47,6 +51,74 @@ python main.py
 the program will run and check for new listings every 5 minutes.
 Based on the queries in the DB, it will check for new listings and process them through the process_listings method in
 INotifier.
+
+## Implementation
+
+ways to communicate with the notifier  
+! make sure the Redis [server is running](#executing-program)
+
+### commands
+
+ADD or REMOVE queries to monitor
+
+```python
+import redis.asyncio as redis
+from marketplace_notifier.notifier.tweedehands.models import TweedehandsQuerySpecs
+
+# Connect to local Redis instance
+redis_client = redis.StrictRedis()
+channel = 'commands'
+
+
+# ADD QUERY
+async def add_query(query_specs: TweedehandsQuerySpecs):
+    await redis_client.publish(channel, f"ADD_QUERY {query_specs}")
+
+
+async def remove_query(request_url: str):
+    await redis_client.publish(channel, f"REMOVE_QUERY {request_url}")
+
+```
+
+### discord bot
+example of how to handle new listings  
+in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact
+
+```python
+import redis.asyncio as redis
+from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
+
+from discord.ext import tasks, commands
+
+
+# in a Cog
+class MyCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.redis_client = redis.StrictRedis()
+        self.redis_channel = 'discord_bot'
+        self.bot.loop.create_task(self.new_listing_reader())
+
+
+async def cog_unload(self):
+    await self.redis_client.aclose()
+
+
+async def new_listing_reader(self):
+    async with self.redis_client.pubsub() as pubsub:
+        await pubsub.subscribe(self.redis_channel)
+
+        while True:
+            message = await channel.get_message(ignore_subscribe_messages=True)
+            if message is not None:
+                data = msg['data'].decode('utf-8')
+                if data.startswith('NEW_LISTING'):
+                    serialized_new_tweedehands_listing_info = data[len('NEW_LISTING '):]
+                    new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing)
+
+                    # do something with the new_tweedehands_listing_info
+                    # ...
+```
 
 ## FYI
 
