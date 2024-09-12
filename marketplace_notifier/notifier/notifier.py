@@ -134,7 +134,7 @@ class INotifier(ABC):
                     # publish to subscribers
                     serialized_tweedehands_listing_info = parsed_listing_info.to_json()
                     command = "NEW"
-                    msg = " ".join([command, query_url, serialized_tweedehands_listing_info])
+                    msg = " ".join([command, query_url, json.dumps(serialized_tweedehands_listing_info)])
                     await async_redis_client.publish('listings', msg)
 
                 else:

@@ -19,13 +19,17 @@ class TestListingInfo(test.TestCase):
     def tearDownClass(cls):
         test.finalizer()
 
+    async def test_redis_connection(self):
+        redis_client = redis.StrictRedis()
+        r = await redis_client.ping()
+        self.assertTrue(r)
+
     async def test_query_should_add_listing_in_db(self):
         tn = TweedehandsNotifier()
         # add query to monitor
         query = "iphone"
         request_url = TweedehandsQuerySpecs(query=query).request_query_url
         await QueryInfo.create(request_url=request_url, marketplace=tn.marketplace, query=query)
-
 
         async with aiohttp.ClientSession() as cs:
             request_url_with_listings = await tn.fetch_all_query_urls(cs)

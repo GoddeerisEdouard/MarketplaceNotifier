@@ -31,21 +31,25 @@ marketplaces:
 * tested on **Python 3.8**
   [requirements.txt](requirements.txt) contains all Python packages needed.
 
+install docker and make sure a Redis container is installed
+```shell
+docker build -t my-redis .
+# start container for the first time
+docker run -p 6379:6379 --name redis-server -d my-redis
+```
+
 ```shell
 pip install -r requirements.txt
 ```
 
 ### Executing program
 
-first, build the redis server and run it in Docker
-
+make sure the Redis server is running, if not, start it with
 ```shell
-docker build -t my-redis .
-docker run -p 6379:6379 --name redis-server -d my-redis
+docker start redis-server
 ```
 
 next, run the monitor
-
 ```shell
 python main.py
 ```
@@ -87,6 +91,7 @@ example of how to handle new listings
 in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact
 
 ```python
+import json
 import redis.asyncio as redis
 # this import might differ
 from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
@@ -96,34 +101,34 @@ from discord.ext import tasks, commands
 
 # in a Cog
 class MyCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.redis_client = redis.StrictRedis()
-        self.redis_channel = 'listings'
-        self.bot.loop.create_task(self.new_listing_reader())
+  def __init__(self, bot):
+    self.bot = bot
+    self.redis_client = redis.StrictRedis()
+    self.redis_channel = 'listings'
+    self.bot.loop.create_task(self.new_listing_reader())
 
 
 async def cog_unload(self):
-    await self.redis_client.aclose()
+  await self.redis_client.aclose()
 
 
 async def new_listing_reader(self):
-    async with self.redis_client.pubsub() as pubsub:
-        await pubsub.subscribe(self.redis_channel)
+  async with self.redis_client.pubsub() as pubsub:
+    await pubsub.subscribe(self.redis_channel)
 
-        while True:
-            message = await channel.get_message(ignore_subscribe_messages=True)
-            if message is not None:
-                data = msg['data'].decode('utf-8')
-                splitted_data = data.split(' ')
-                if splitted_data[0] == 'NEW':
-                    # NEW <request_url> <serialized TweedehandsListingInfo object>
-                    query_url = splitted_data[1]
-                    serialized_tweedehands_listing_info = " ".join(splitted_data[2:])
-                    new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing_info)
+    while True:
+      message = await channel.get_message(ignore_subscribe_messages=True)
+      if message is not None:
+        data = msg['data'].decode('utf-8')
+        splitted_data = data.split(' ')
+        if splitted_data[0] == 'NEW':
+          # NEW <request_url> <serialized TweedehandsListingInfo object>
+          query_url = splitted_data[1]
+          serialized_tweedehands_listing_info = json.loads(" ".join(splitted_data[2:]))
+          new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing_info)
 
-                    # do something with the new_tweedehands_listing_info
-                    # ...
+          # do something with the new_tweedehands_listing_info
+          # ...
 ```
 
 ## FYI
