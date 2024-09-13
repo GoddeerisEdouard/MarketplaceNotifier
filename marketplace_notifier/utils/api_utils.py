@@ -5,8 +5,7 @@ from typing import Optional, Dict
 import aiohttp
 
 logging.basicConfig(level=logging.INFO, filename="requests.log",
-                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", encoding="utf-8")
 
 async def get_request_response(client_session: aiohttp.ClientSession, URI: str,
                                headers: Optional[Dict] = None) -> str:

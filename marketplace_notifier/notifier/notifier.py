@@ -1,6 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 from typing import List, Optional, Type, Set, Dict
 
 import aiohttp
@@ -121,21 +122,21 @@ class INotifier(ABC):
         for query_url, non_ad_listings_infos in query_url_listing_infos.items():
             logging.info(f'processing {query_url}...')
             for parsed_listing_info in non_ad_listings_infos:
-                result = ListingInfoDB.exists(id=parsed_listing_info.id)
-                if result:
-                    logging.info(f'new listing found: {parsed_listing_info}')
-
-                    # convert parsed_listings to db listinginfo
-                    listing_info_db_obj = ListingInfoDB(id=parsed_listing_info.id, title=parsed_listing_info.title,
-                                                        marketplace=self.marketplace,
-                                                        date=parsed_listing_info.posted_date)
-                    # save listing in db
-                    await listing_info_db_obj.save()
-                    # publish to subscribers
-                    serialized_tweedehands_listing_info = parsed_listing_info.to_json()
-                    command = "NEW"
-                    msg = " ".join([command, query_url, json.dumps(serialized_tweedehands_listing_info)])
-                    await async_redis_client.publish('listings', msg)
-
-                else:
+                exists = await ListingInfoDB.exists(id=parsed_listing_info.id)
+                if exists:
                     logging.info(f'listing already exists: {parsed_listing_info}')
+                    continue
+
+                logging.info(f'new listing found: {asdict(parsed_listing_info)}')
+
+                # convert parsed_listings to db listinginfo
+                listing_info_db_obj = ListingInfoDB(id=parsed_listing_info.id, title=parsed_listing_info.title,
+                                                    marketplace=self.marketplace,
+                                                    date=parsed_listing_info.posted_date)
+                # save listing in db
+                await listing_info_db_obj.save()
+                # publish to subscribers
+                serialized_tweedehands_listing_info = parsed_listing_info.to_json()
+                command = "NEW"
+                msg = " ".join([command, query_url, json.dumps(serialized_tweedehands_listing_info)])
+                await async_redis_client.publish('listings', msg)

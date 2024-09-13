@@ -28,7 +28,7 @@ marketplaces:
 
 ### Installing
 
-* tested on **Python 3.8**
+* tested on **Python 3.9**
   [requirements.txt](requirements.txt) contains all Python packages needed.
 
 install docker and make sure a Redis container is installed
@@ -141,7 +141,7 @@ in format `"NEW <request_url> <serialized TweedehandsListingInfo object>"`
 
 in the redis pubsub `commands` channel, you can send commands:
 > **Adding** queries:
-`"ADD_QUERY <serialized TweedehandsQuerySpecs object>"`
+`"ADD_QUERY {"query": ..., "cityOrPostalCode": ..., "radius": ...}"`
 
 > **Removing** queries:
 `"REMOVE_QUERY <request_url>"`
