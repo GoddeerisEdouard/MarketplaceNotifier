@@ -66,8 +66,8 @@ class PriceRange:
     max_price_cents: int
 
 
-@dataclass
-class IQuerySpecs(ABC):
+
+class IQuerySpecs(BaseModel, ABC):
     """
     query specifications given by user
     these will be parsed into a URL to make a GET REQUEST

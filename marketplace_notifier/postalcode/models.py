@@ -1,7 +1,7 @@
 import json
 import re
 import urllib.parse
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Optional, List, ClassVar
 
 import aiohttp
@@ -32,6 +32,7 @@ class ILocationFilter(BaseModel, ABC):
         """
         helper method to get the postal code of a given city or the city of a given postal code
         city can be either in French or Dutch
+        should be called AFTER the class is initialized to validate the fields once more
         :param client_session: used to make the GET request for the postal code data
         :param postal_code_or_city: a postal code or a city (Dutch or French)
         :return: None if invalid postal_code_or_city, else a dict of  the postal code with its matching city in Dutch

@@ -1,14 +1,13 @@
 import urllib.parse
-from abc import abstractmethod
-from dataclasses import dataclass
-from typing import List, Optional
 
-from marketplace_notifier.notifier.models import IQuerySpecs
+from pydantic import computed_field
+
+from marketplace_notifier.notifier.models import IQuerySpecs, PriceRange
 from marketplace_notifier.postalcode.models import ILocationFilter
 
 
-@dataclass
 class TweedehandsQuerySpecs(IQuerySpecs):
+    @computed_field
     @property
     def request_query_url(self) -> str:
         """
@@ -22,6 +21,7 @@ class TweedehandsQuerySpecs(IQuerySpecs):
             URI += f"&distanceMeters={str(self.location_filter.radius * 1000)}&postcode={str(self.location_filter.postal_code)}"
         return URI
 
+    @computed_field
     @property
     def browser_query_url(self) -> str:
         """
