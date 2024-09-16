@@ -19,6 +19,8 @@ class TweedehandsQuerySpecs(IQuerySpecs):
               "&searchInTitleAndDescription=true&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view"
         if self.location_filter:
             URI += f"&distanceMeters={str(self.location_filter.radius * 1000)}&postcode={str(self.location_filter.postal_code)}"
+        if self.price_range:
+            URI += f"&attributeRanges[]:PriceCents{str(self.price_range.min_price_cents)}:{str(self.price_range.max_price_cents)}"
         return URI
 
     @computed_field
@@ -34,6 +36,8 @@ class TweedehandsQuerySpecs(IQuerySpecs):
         websearch_url = f"https://www.2dehands.be/q/{urllib.parse.quote_plus(self.query)}/#Language:all-languages|offeredSince:Gisteren|sortBy:SORT_INDEX|sortOrder:DECREASING"
         if self.location_filter is not None:
             websearch_url += f"|distanceMeters:{self.location_filter.radius * 1000}|postcode:{self.location_filter.postal_code}"
+        if self.price_range is not None:
+            websearch_url +=f"|PriceCentsFrom:{str(self.price_range.min_price_cents)}|PriceCentsTo:{str(self.price_range.max_price_cents)}"
         return websearch_url
 
     @classmethod
@@ -52,4 +56,3 @@ class TweedehandsQuerySpecs(IQuerySpecs):
 
 class TweedehandsLocationFilter(ILocationFilter):
     RADIUS_LIST = [3, 5, 10, 15, 25, 50, 75]
-

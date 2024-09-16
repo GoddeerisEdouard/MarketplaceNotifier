@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import radians
 from typing import Optional
 
 import aiohttp
@@ -34,7 +35,7 @@ async def close_db():
 
 @dataclass
 class LocationFilter:
-    cityOrPostalCode: str
+    city_or_postal_code: str
     radius: int
 
 
@@ -45,20 +46,26 @@ class QueryIn:
     price_range: Optional[PriceRange] = None
 
 
-# OUTPUT : {query: ..., request_url_ID:..., locationFilter: {city:..., postalCode:..., radius:...}}
-# or OUTPUT : {query: ..., request_url_ID:..., locationFilter: null}
+# OUTPUT : {"browser_query_url": "", "location_filter": {"city": "", "postal_code": null, "radius": null}, "price_range": null, "query": "", "request_query_url": ""}
 @app.post("/query/add")
 @validate_request(QueryIn)
 async def create_query(data: QueryIn):
     city_and_postal_code = await TweedehandsLocationFilter.get_valid_postal_code_and_city(client_session=app.cs,
-                                                                                          postal_code_or_city=data.location_filter.cityOrPostalCode) if data.location_filter else None
+                                                                                          postal_code_or_city=data.location_filter.city_or_postal_code) if data.location_filter else None
+    # validate filters
+    lf = TweedehandsLocationFilter(city=city_and_postal_code['city'],
+                                   postal_code=city_and_postal_code[
+                                       'postal_code'],
+                                   radius=data.location_filter.radius) if city_and_postal_code and int(
+        data.location_filter.radius) > 0 else None
 
+    price_range = PriceRange(min_price_cents=data.price_range.min_price_cents,
+                             max_price_cents=data.price_range.max_price_cents) if data.price_range and data.price_range.min_price_cents >= 0 and data.price_range.max_price_cents > data.price_range.min_price_cents else None
+
+    # fill model with validated data
     tqs = TweedehandsQuerySpecs(query=data.query,
-                                location_filter=TweedehandsLocationFilter(city=city_and_postal_code['city'],
-                                                                          postal_code=city_and_postal_code[
-                                                                              'postal_code'],
-                                                                          radius=data.location_filter.radius) if city_and_postal_code else None,
-                                price_range=data.price_range)
+                                location_filter=lf,
+                                price_range=price_range)
 
     try:
         await QueryInfo.create(request_url=tqs.request_query_url, marketplace='TWEEDEHANDS', query=tqs.query)

@@ -62,7 +62,7 @@ ADD queries to monitor
 ```yaml
 {
   "query": "...",
-  "locationFilter": {
+  "location_filter": {
     "cityOrPostalCode": "...",
     "radius": 10
   },
@@ -72,7 +72,7 @@ ADD queries to monitor
   }
 }
 ```
-> ! `locationFilter` and `price_range` can be null
+> ! `location_filter` and `price_range` can be null
 
 python example:
 ```python
@@ -81,7 +81,7 @@ import requests
 WEBSERVER_URL = 'localhost:5000'
 payload = 
         {"query": query, 
-        "locationFilter": {"cityOrPostalCode": cityOrPostalCode, "radius": radius},
+        "location_filter": {"cityOrPostalCode": cityOrPostalCode, "radius": radius},
         "price_range": {"min_price_cents": 0, "max_price_cents": 100000}
         }
 response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
