@@ -31,27 +31,18 @@ marketplaces:
 * tested on **Python 3.9**
   [requirements.txt](requirements.txt) contains all Python packages needed.
 
-install docker and make sure a Redis container is installed
 ```shell
-docker build -t my-redis .
-# start container for the first time
-docker run -p 6379:6379 --name redis-server -d my-redis
+docker-compose up -d --build
 ```
 
-```shell
-pip install -r requirements.txt
-```
+This starts:
+- the Redis server
+- the webserver
+- the notifier (which checks for new listings)
 
 ### Executing program
-
-make sure the Redis server is running, if not, start it with
 ```shell
-docker start redis-server
-```
-
-next, run the monitor
-```shell
-python main.py
+docker-compose up -d
 ```
 
 the program will run and check for new listings every 5 minutes.
@@ -65,29 +56,40 @@ ways to communicate with the notifier
 
 ### commands
 
-ADD or REMOVE queries to monitor
+ADD queries to monitor
+**Add** commands:
+- `POST localhost:5000/query/add`
+```yaml
+{
+  "query": "...",
+  "locationFilter": {
+    "cityOrPostalCode": "...",
+    "radius": 10
+  },
+  "price_range": {
+    "min_price_cents": 0,
+    "max_price_cents": 100000
+  }
+}
+```
+> ! `locationFilter` and `price_range` can be null
 
+python example:
 ```python
-import redis.asyncio as redis
-from marketplace_notifier.notifier.tweedehands.models import TweedehandsQuerySpecs
+import requests
 
-# Connect to local Redis instance
-redis_client = redis.StrictRedis()
-channel = 'commands'
-
-
-# ADD QUERY
-async def add_query(query_specs: TweedehandsQuerySpecs):
-    await redis_client.publish(channel, f"ADD_QUERY {query_specs}")
-
-
-async def remove_query(request_url: str):
-    await redis_client.publish(channel, f"REMOVE_QUERY {request_url}")
-
+WEBSERVER_URL = 'localhost:5000'
+payload = 
+        {"query": query, 
+        "locationFilter": {"cityOrPostalCode": cityOrPostalCode, "radius": radius},
+        "price_range": {"min_price_cents": 0, "max_price_cents": 100000}
+        }
+response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
+response_data = response.json()
 ```
 
 ### discord bot
-example of how to handle new listings  
+example of how to handle new listings with [Redis pubsub](https://redis-py.readthedocs.io/en/stable/advanced_features.html#publish-subscribe)
 in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact
 
 ```python
@@ -98,37 +100,44 @@ from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsL
 
 from discord.ext import tasks, commands
 
+REDIS_SUB_CHANNEL = 'listings'
+
 
 # in a Cog
 class MyCog(commands.Cog):
-  def __init__(self, bot):
-    self.bot = bot
-    self.redis_client = redis.StrictRedis()
-    self.redis_channel = 'listings'
-    self.bot.loop.create_task(self.new_listing_reader())
+    def __init__(self, bot):
+        self.bot = bot
+        self.redis_client = redis.StrictRedis()
+        self.bot.loop.create_task(self.new_listing_reader())
 
 
-async def cog_unload(self):
-  await self.redis_client.aclose()
+    async def cog_unload(self):
+        await self.redis_client.aclose()
+    
+    
+    async def new_listing_reader(self):
+        """
+        listens in Redis channel for messages and processes them
+        """
+        async with self.bot.redis_client.pubsub() as pubsub:
+            await pubsub.subscribe(REDIS_SUB_CHANNEL)
+            logging.info("started listening for new listings...")
+            async for msg in pubsub.listen():
+                if msg['type'] != 'message':
+                    continue
+    
+                data = msg['data'].decode('utf-8')
+                splitted_data = data.split(' ')
+                if splitted_data[0] == 'NEW':
+                    # NEW <request_url> <serialized TweedehandsListingInfo object>
+                    query_url = splitted_data[1]
+                    serialized_tweedehands_listing_info = json.loads(" ".join(splitted_data[2:]))
+                    new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing_info)
+    
+                    # do something with the new_tweedehands_listing_info
+                    # ...
 
-
-async def new_listing_reader(self):
-  async with self.redis_client.pubsub() as pubsub:
-    await pubsub.subscribe(self.redis_channel)
-
-    while True:
-      message = await channel.get_message(ignore_subscribe_messages=True)
-      if message is not None:
-        data = msg['data'].decode('utf-8')
-        splitted_data = data.split(' ')
-        if splitted_data[0] == 'NEW':
-          # NEW <request_url> <serialized TweedehandsListingInfo object>
-          query_url = splitted_data[1]
-          serialized_tweedehands_listing_info = json.loads(" ".join(splitted_data[2:]))
-          new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing_info)
-
-          # do something with the new_tweedehands_listing_info
-          # ...
+# ... setup cog and load the extension
 ```
 
 ## FYI
@@ -137,14 +146,7 @@ queries to be monitored are stored in a DB.
 This is to cache already seen listings and update when new ones arrive.
 
 new listings are sent with Redis to the `'listings'` channel.  
-in format `"NEW <request_url> <serialized TweedehandsListingInfo object>"`
-
-in the redis pubsub `commands` channel, you can send commands:
-> **Adding** queries:
-`"ADD_QUERY {"query": ..., "cityOrPostalCode": ..., "radius": ...}"`
-
-> **Removing** queries:
-`"REMOVE_QUERY <request_url>"`
+a webserver is running (on `http://localhost:5000`) to handle the commands
 
 ## Help
 

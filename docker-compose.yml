@@ -1,0 +1,42 @@
+version: '3'
+services:
+  webserver:
+    build:
+      context: .
+      dockerfile: ./api/src/api/Dockerfile
+    container_name: webserver
+    ports:
+      - "5000:5000"
+    networks:
+      - notifier-network
+    volumes:
+      # for local DB file
+      - shared_data:/app/shared_data
+  redis_server:
+    image: redis:latest
+    container_name: redis_server
+    ports:
+      - "6379:6379"
+    networks:
+      - notifier-network
+
+  redis_pubsub:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: redis_pubsub
+    depends_on:
+      - webserver
+      - redis_server
+    networks:
+      - notifier-network
+    volumes:
+      # for local DB file
+      - shared_data:/app/shared_data
+
+networks:
+  notifier-network:
+    driver: bridge
+
+volumes:
+  shared_data:
