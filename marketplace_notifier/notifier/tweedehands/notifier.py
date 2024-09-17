@@ -52,6 +52,7 @@ class TweedehandsNotifier(INotifier):
                                            specified_location=ListingLocation(cityName=listing.location.city_name,
                                                                               countryName=listing.location.country_name,
                                                                               distanceMeters=listing.location.distance_meters),
-                                           vip_url=listing.vip_url))
+                                           vip_url=listing.vip_url,
+                                           thumbnail_url=listing.pictures[0].large_url if listing.pictures else None))
 
         return parsed_non_ad_tweedehands_listings

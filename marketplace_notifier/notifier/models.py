@@ -48,6 +48,7 @@ class IListingInfo(ABC):
     seller_url: str
     specified_location: ListingLocation
     vip_url: str
+    thumbnail_url: Optional[str]
 
     @property
     @abstractmethod
