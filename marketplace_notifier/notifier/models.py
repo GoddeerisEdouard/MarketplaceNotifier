@@ -31,6 +31,7 @@ class ListingLocation(BaseModel):
     """
     city_name: Optional[str] = Field(None, alias="cityName")
     country_name: Optional[str] = Field(None, alias="countryName")
+    distance_meters: int = Field(..., alias="distanceMeters")
 
 
 @dataclass

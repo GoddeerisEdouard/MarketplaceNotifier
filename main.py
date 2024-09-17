@@ -10,7 +10,7 @@ import constants
 from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
 
 FETCH_INTERVAL = 5 * 60  # 5 minutes
-
+logging.basicConfig(level=logging.INFO)
 
 async def fetch_listings(tn: TweedehandsNotifier, cs: aiohttp.ClientSession, redis_client: redisaio):
     """

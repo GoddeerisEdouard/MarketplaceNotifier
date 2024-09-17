@@ -98,7 +98,7 @@ class INotifier(ABC):
         """
         fetches the listings of all query urls
         :param client_session: session to use the send GET requests
-        :return: None
+        :return: {<query_url>: [<IListingInfo> non-ad listings]}
         """
         # update cached listing_urls
         self.listing_urls_for_requests = set(await QueryInfo.all().values_list("request_url", flat=True))
@@ -116,8 +116,6 @@ class INotifier(ABC):
         """
         saves to DB
         sends new listings to subscribers
-        :param non_ad_listings_infos:
-        :return:
         """
         for query_url, non_ad_listings_infos in query_url_listing_infos.items():
             logging.info(f'processing {query_url}...')
