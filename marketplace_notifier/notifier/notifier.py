@@ -119,6 +119,7 @@ class INotifier(ABC):
         """
         for query_url, non_ad_listings_infos in query_url_listing_infos.items():
             logging.info(f'processing {query_url}...')
+            new_parsed_listings_infos = []
             for parsed_listing_info in non_ad_listings_infos:
                 exists = await ListingInfoDB.exists(id=parsed_listing_info.id)
                 if exists:
@@ -133,8 +134,14 @@ class INotifier(ABC):
                                                     date=parsed_listing_info.posted_date)
                 # save listing in db
                 await listing_info_db_obj.save()
-                # publish to subscribers
-                serialized_tweedehands_listing_info = parsed_listing_info.to_json()
-                command = "NEW"
-                msg = " ".join([command, query_url, json.dumps(serialized_tweedehands_listing_info)])
-                await async_redis_client.publish('listings', msg)
+                new_parsed_listings_infos.append(parsed_listing_info)
+
+            if len(new_parsed_listings_infos) == 0:
+                continue
+            # publish to subscribers
+            # reverse the new listings (old to new)
+            serialized_tweedehands_listing_infos = [x.to_json() for x in reversed(new_parsed_listings_infos)]
+            command = "NEW"
+            data = json.dumps({"listings": serialized_tweedehands_listing_infos})
+            msg = " ".join([command, query_url, data])
+            await async_redis_client.publish('listings', msg)

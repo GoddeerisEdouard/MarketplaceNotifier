@@ -127,12 +127,13 @@ class MyCog(commands.Cog):
                 data = msg['data'].decode('utf-8')
                 splitted_data = data.split(' ')
                 if splitted_data[0] == 'NEW':
-                    # NEW <request_url> <serialized TweedehandsListingInfo object>
+                    # NEW <request_url> {"listings": [<serialized TweedehandsListingInfo objects>]}
                     query_url = splitted_data[1]
-                    serialized_tweedehands_listing_info = json.loads(" ".join(splitted_data[2:]))
-                    new_tweedehands_listing_info = TweedehandsListingInfo(**serialized_tweedehands_listing_info)
+                    listings_data = json.loads(" ".join(splitted_data[2:]))
+                    
+                    new_tweedehands_listings_infos = [TweedehandsListingInfo(**l) for l in listings_data['listings']]]
     
-                    # do something with the new_tweedehands_listing_info
+                    # do something with the new_tweedehands_listings_infos
                     # ...
 
 # ... setup cog and load the extension
