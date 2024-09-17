@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from math import radians
 from typing import Optional
 
 import aiohttp

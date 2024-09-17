@@ -2,7 +2,7 @@ import urllib.parse
 
 from pydantic import computed_field
 
-from marketplace_notifier.notifier.models import IQuerySpecs, PriceRange
+from marketplace_notifier.notifier.models import IQuerySpecs
 from marketplace_notifier.postalcode.models import ILocationFilter
 
 
@@ -20,7 +20,7 @@ class TweedehandsQuerySpecs(IQuerySpecs):
         if self.location_filter:
             URI += f"&distanceMeters={str(self.location_filter.radius * 1000)}&postcode={str(self.location_filter.postal_code)}"
         if self.price_range:
-            URI += f"&attributeRanges[]:PriceCents{str(self.price_range.min_price_cents)}:{str(self.price_range.max_price_cents)}"
+            URI += f"&attributeRanges[]:PriceCents:{str(self.price_range.min_price_cents)}:{str(self.price_range.max_price_cents)}"
         return URI
 
     @computed_field

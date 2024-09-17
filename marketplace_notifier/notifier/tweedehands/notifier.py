@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
 
-from marketplace_notifier.notifier.models import IListingInfo, ListingLocation
+from marketplace_notifier.notifier.models import ListingLocation
 from marketplace_notifier.notifier.notifier import INotifier
 from marketplace_notifier.notifier.tweedehands import api_models
 from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo

@@ -31,7 +31,7 @@ class QueryInfo(Model):
         unique=True,
         max_length=500,
         validators=[RegexValidator(
-            r'^https:\/\/www\.2dehands\.be\/lrp\/api\/search\?attributesByKey\[\]=Language%3Aall-languages&attributesByKey\[\]=offeredSince%3AGisteren&limit=30&offset=0&query=[\w%+-]+&searchInTitleAndDescription=true&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view(?:&distanceMeters=\d+&postcode=\d{4})?(?:&attributeRanges\[\]:PriceCents\d+:\d+)?$',
+            r'^https:\/\/www\.2dehands\.be\/lrp\/api\/search\?attributesByKey\[\]=Language%3Aall-languages&attributesByKey\[\]=offeredSince%3AGisteren&limit=30&offset=0&query=[\w%+-]+&searchInTitleAndDescription=true&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view(?:&distanceMeters=\d+&postcode=\d{4})?(?:&attributeRanges\[\]:PriceCents:\d+:\d+)?$',
             re.M)],
         description="url to use for GET request"
     )
