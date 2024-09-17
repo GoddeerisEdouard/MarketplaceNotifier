@@ -86,6 +86,9 @@ response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
 response_data = response.json()
 ```
 
+**Delete** commands:
+- `DELETE localhost:5000/query/<query_info_id>`
+
 ### discord bot
 example of how to handle new listings with [Redis pubsub](https://redis-py.readthedocs.io/en/stable/advanced_features.html#publish-subscribe)
 in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact

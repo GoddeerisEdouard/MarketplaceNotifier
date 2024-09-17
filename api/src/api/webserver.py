@@ -68,13 +68,22 @@ async def create_query(data: QueryIn):
                                 price_range=price_range)
 
     try:
-        await QueryInfo.create(request_url=tqs.request_query_url, marketplace='TWEEDEHANDS', query=tqs.query)
+        qi = await QueryInfo.create(request_url=tqs.request_query_url, marketplace='TWEEDEHANDS', query=tqs.query)
     except tortoise.exceptions.IntegrityError:
         return {
             "error": "Query already exists",
         }, 500
 
-    return tqs.model_dump()
+    return_model = tqs.model_dump()
+    return_model['id'] = qi.id
+    return return_model, 200
+
+
+@app.delete("/query/<query_info_id>")
+async def delete_query(query_info_id: int):
+    query = await QueryInfo.get(id=query_info_id)
+    await query.delete()
+    return {"message": "Query deleted"}, 200
 
 
 @app.errorhandler(RequestSchemaValidationError)
