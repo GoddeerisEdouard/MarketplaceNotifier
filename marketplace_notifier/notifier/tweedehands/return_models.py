@@ -18,6 +18,6 @@ class TweedehandsListingInfo(IListingInfo):
                  "posted_date": self.posted_date.strftime("%Y/%m/%d, %H:%M:%S"),
                  "seller_url": self.seller_url,
                  "specified_location": self.specified_location.model_dump(),
-                 "vip_url": self.vip_url,
+                 "browser_url": self.get_full_url(),
                  "thumbnail_url": self.thumbnail_url
                  }
