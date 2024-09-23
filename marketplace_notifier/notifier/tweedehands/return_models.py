@@ -12,7 +12,7 @@ class TweedehandsListingInfo(IListingInfo):
     def to_json(self):
         return { "id": self.id,
                  "title": self.title,
-                 "price_info": self.price_info.model_dump(),
+                 "price_info": self.price_info,
                  "description": self.description,
                  "screenshot_path": self.screenshot_path,
                  "posted_date": self.posted_date.strftime("%Y/%m/%d, %H:%M:%S"),

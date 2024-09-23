@@ -44,7 +44,7 @@ class TweedehandsNotifier(INotifier):
                 parsed_non_ad_tweedehands_listings.append(
                     TweedehandsListingInfo(id=listing.item_id,
                                            title=listing.title,
-                                           price_info=listing.price_info,
+                                           price_info=listing.price_info.human_readable_price,
                                            description=listing.description,
                                            screenshot_path=None,
                                            posted_date=listing.date,

@@ -12,19 +12,6 @@ from marketplace_notifier.postalcode.models import ILocationFilter
 # NOTE: these classes are used as input / output models when using functions
 
 
-class IPriceType(BaseModel, ABC):
-    """
-    this enum interface represents all price types of a listing
-    examples: exact price, bid, not_given
-    """
-    pass
-
-
-class PriceInfo(BaseModel, ABC):
-    price_type: IPriceType
-    price_cents: int
-
-
 class ListingLocation(BaseModel):
     """
     class representing all Location information of a Listing
@@ -41,7 +28,7 @@ class IListingInfo(ABC):
     """
     id: str
     title: str
-    price_info: PriceInfo
+    price_info: str
     description: str
     screenshot_path: Optional[str]
     posted_date: datetime
@@ -66,7 +53,6 @@ class IListingInfo(ABC):
 class PriceRange:
     min_price_cents: int
     max_price_cents: int
-
 
 
 class IQuerySpecs(BaseModel, ABC):

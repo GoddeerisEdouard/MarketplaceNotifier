@@ -114,8 +114,8 @@ class INotifier(ABC):
     async def process_listings(self, query_url_listing_infos: Dict[
         str, List[Optional[Type[IListingInfo]]]], async_redis_client: redis.client) -> None:
         """
-        saves to DB
-        sends new listings to subscribers
+        stores some attributes of listing in DB
+        sends new listings with restricted attributes to subscribers
         """
         for query_url, non_ad_listings_infos in query_url_listing_infos.items():
             logging.info(f'processing {query_url}...')
