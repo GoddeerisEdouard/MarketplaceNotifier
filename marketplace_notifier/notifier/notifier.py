@@ -119,6 +119,11 @@ class INotifier(ABC):
         """
         for query_url, non_ad_listings_infos in query_url_listing_infos.items():
             logging.info(f'processing {query_url}...')
+            # it might take a while for every query_url to be processed
+            qi_exists = await QueryInfo.exists(request_url=query_url)
+            if not qi_exists:
+                logging.warning(f"query url {query_url} was removed from the DB while processing...")
+                continue
             new_parsed_listings_infos = []
             for parsed_listing_info in non_ad_listings_infos:
                 exists = await ListingInfoDB.exists(id=parsed_listing_info.id)
