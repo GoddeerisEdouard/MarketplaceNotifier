@@ -54,7 +54,7 @@ ways to communicate with the notifier
 
 ### commands
 
-ADD queries to monitor
+ADD queries to monitor  
 **Add** commands:
 - `POST localhost:5000/query/add`
 ```yaml
@@ -86,12 +86,12 @@ response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
 response_data = response.json()
 ```
 
-GET queries to monitor
-**Get** commands:
+GET queries to monitor  
+**Get** commands:  
 get all queryinfo objects
 - `GET localhost:5000/query/`
 
-get a queryinfo object by ID
+get queryinfo object by ID
 - `GET localhost:5000/query/<query_info_id>`
 
 DELETE query
