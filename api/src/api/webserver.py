@@ -71,7 +71,7 @@ async def create_query(data: QueryIn):
 
     try:
         qi = await QueryInfo.create(request_url=tqs.request_query_url, marketplace='TWEEDEHANDS', query=tqs.query)
-    except exceptions.IntegrityError:
+    except tortoise.exceptions.IntegrityError:
         return {
             "error": "Query already exists",
         }, 500
