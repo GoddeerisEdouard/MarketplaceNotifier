@@ -86,6 +86,15 @@ response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
 response_data = response.json()
 ```
 
+GET queries to monitor
+**Get** commands:
+get all queryinfo objects
+- `GET localhost:5000/query/`
+
+get a queryinfo object by ID
+- `GET localhost:5000/query/<query_info_id>`
+
+DELETE query
 **Delete** commands:
 - `DELETE localhost:5000/query/<query_info_id>`
 

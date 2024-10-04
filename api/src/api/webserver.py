@@ -7,6 +7,7 @@ from quart import Quart
 from quart_schema import validate_request, QuartSchema, RequestSchemaValidationError
 from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
+from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
 from marketplace_notifier.db_models.models import QueryInfo
 from marketplace_notifier.notifier.models import PriceRange
@@ -15,6 +16,8 @@ import constants
 
 app = Quart(__name__)
 QuartSchema(app)
+QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
+QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
 
 
 @app.before_serving
@@ -45,7 +48,7 @@ class QueryIn:
     price_range: Optional[PriceRange] = None
 
 
-# OUTPUT : {"browser_query_url": "", "location_filter": {"city": "", "postal_code": null, "radius": null}, "price_range": null, "query": "", "request_query_url": ""}
+# OUTPUT : {"id": 123, "browser_query_url": "", "location_filter": {"city": "", "postal_code": null, "radius": null}, "price_range": null, "query": "", "request_query_url": ""}
 @app.post("/query/add")
 @validate_request(QueryIn)
 async def create_query(data: QueryIn):
@@ -68,7 +71,7 @@ async def create_query(data: QueryIn):
 
     try:
         qi = await QueryInfo.create(request_url=tqs.request_query_url, marketplace='TWEEDEHANDS', query=tqs.query)
-    except tortoise.exceptions.IntegrityError:
+    except exceptions.IntegrityError:
         return {
             "error": "Query already exists",
         }, 500
@@ -76,6 +79,24 @@ async def create_query(data: QueryIn):
     return_model = tqs.model_dump()
     return_model['id'] = qi.id
     return return_model, 200
+
+
+@app.get("/query")
+async def get_all_queries():
+    qi_py = await QueryInfo_Pydantic_List.from_queryset(QueryInfo.all())
+    return qi_py.model_dump_json()
+
+
+@app.get("/query/<query_info_id>")
+async def get_query_by_id(query_info_id: int):
+    try:
+        qi = await QueryInfo.get(id=query_info_id)
+    except tortoise.exceptions.DoesNotExist:
+        return {
+            "error": "Not Found",
+        }, 404
+    qi_py = await QueryInfo_Pydantic.from_tortoise_orm(qi)
+    return qi_py.model_dump_json()
 
 
 @app.delete("/query/<query_info_id>")
