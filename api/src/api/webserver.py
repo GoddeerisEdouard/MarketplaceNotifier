@@ -12,7 +12,9 @@ from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_
 from marketplace_notifier.db_models.models import QueryInfo
 from marketplace_notifier.notifier.models import PriceRange
 from marketplace_notifier.notifier.tweedehands.models import TweedehandsLocationFilter, TweedehandsQuerySpecs
-import constants
+from config.config import config
+
+DEFAULT_DB_URL = f"sqlite://{config['database_path']}/db.sqlite3"
 
 app = Quart(__name__)
 QuartSchema(app)
@@ -23,7 +25,7 @@ QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
 @app.before_serving
 async def startup():
     await Tortoise.init(
-        db_url=constants.DEFAULT_DB_URL,
+        db_url=DEFAULT_DB_URL,
         modules={"models": ["marketplace_notifier.db_models.models"]}
     )
     app.cs = aiohttp.ClientSession()
@@ -120,11 +122,11 @@ async def ping() -> str:
 
 register_tortoise(
     app,
-    db_url=constants.DEFAULT_DB_URL,
+    db_url=DEFAULT_DB_URL,
     modules={"models": ["marketplace_notifier.db_models.models"]},
     generate_schemas=True,
 )
 
 if __name__ == '__main__':
     # run Quart webserver
-    app.run('0.0.0.0', port=5000, debug=True)
+    app.run(config["webserver_host"], port=5000, debug=True)

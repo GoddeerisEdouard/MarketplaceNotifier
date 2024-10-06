@@ -13,22 +13,39 @@ marketplaces:
 ## Table of contents
 
 * [Getting Started](#getting-started)
-    + [Installing](#installing)
-    + [Executing program](#executing-program)
+  * [Pre-requisites](#pre-requisites)
+  * [Installing](#installing)
+    * [Locally](#locally)
+    * [Dockerized](#dockerized)
+  * [Executing program](#executing-program)
 * [Implementation](#implementation)
-    * [commands](#commands)
-    * [discord bot](#discord-bot)
+  * [commands](#commands)
+  * [discord bot](#discord-bot)
 * [FYI](#fyi)
 * [Help](#help)
 
 
 ## Getting Started
-
-### Installing
-
+### Pre-requisites
 * tested on **Python 3.9**
   [requirements.txt](requirements.txt) contains all Python packages needed.
 
+### Installing
+#### Locally
+A **redis server** should be running on port 6379
+Make sure you can ping the server locally via the `redis-cli`
+
+webserver to handle CRUD operations on listing queries
+```python
+python api/src/api/webserver.py
+```
+
+fetch new listings & sends them with Redis
+```python
+python main.py
+```
+
+#### Dockerized
 ```shell
 docker-compose up -d --build
 ```
@@ -54,8 +71,7 @@ ways to communicate with the notifier
 
 ### commands
 
-ADD queries to monitor  
-**Add** commands:
+**ADD** queries to monitor
 - `POST localhost:5000/query/add`
 ```yaml
 {
@@ -85,17 +101,17 @@ payload =
 response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
 response_data = response.json()
 ```
+---
 
-GET queries to monitor  
-**Get** commands:  
+**GET** queries to monitor  
 get all queryinfo objects
 - `GET localhost:5000/query/`
 
 get queryinfo object by ID
 - `GET localhost:5000/query/<query_info_id>`
+---
 
-DELETE query
-**Delete** commands:
+**DELETE** query
 - `DELETE localhost:5000/query/<query_info_id>`
 
 ### discord bot

@@ -6,7 +6,8 @@ import aiohttp
 import redis.asyncio as redisaio
 from tortoise import run_async, Tortoise
 
-import constants
+from api.webserver import DEFAULT_DB_URL
+from config.config import config
 from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
 
 FETCH_INTERVAL = 5 * 60  # 5 minutes
@@ -31,13 +32,13 @@ async def run():
     sends new listings to the pubsub channel after every interval
     """
     await Tortoise.init(
-        db_url=constants.DEFAULT_DB_URL,
+        db_url=DEFAULT_DB_URL,
         modules={'models': ['marketplace_notifier.db_models.models']}
     )
     await Tortoise.generate_schemas()
 
     # initialize redis pubsub IPC
-    redis_client = redisaio.StrictRedis(host='redis_server')
+    redis_client = redisaio.StrictRedis(host=config["redis_host"])
 
     tn = TweedehandsNotifier()
     async with aiohttp.ClientSession() as cs:

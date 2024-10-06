@@ -2,6 +2,7 @@ FROM python:3.9-slim
 
 WORKDIR /app
 ENV PYTHONPATH="${PYTHONPATH}:/app"
+ENV USE_DOCKER_CONFIG=true
 
 # Copy the Python webserver script
 COPY . .

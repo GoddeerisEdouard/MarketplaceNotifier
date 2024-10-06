@@ -3,6 +3,7 @@ FROM python:3.9-slim
 
 WORKDIR /app
 ENV PYTHONPATH="${PYTHONPATH}:/app"
+ENV USE_DOCKER_CONFIG=true
 
 # Copy the Redis Pub/Sub script
 COPY . .
