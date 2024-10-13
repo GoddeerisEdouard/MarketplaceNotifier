@@ -98,7 +98,7 @@ payload =
         "location_filter": {"cityOrPostalCode": cityOrPostalCode, "radius": radius},
         "price_range": {"min_price_cents": 0, "max_price_cents": 100000}
         }
-response = requests.post(f'http://{WEBSERVER_URL}/add_query', json=payload)
+response = requests.post(f'http://{WEBSERVER_URL}/query/add', json=payload)
 response_data = response.json()
 ```
 ---
