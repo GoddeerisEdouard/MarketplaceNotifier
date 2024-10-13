@@ -5,7 +5,7 @@ ENV PYTHONPATH="${PYTHONPATH}:/app"
 ENV USE_DOCKER_CONFIG=true
 
 # Copy the Python webserver script
-COPY . .
+COPY src/api .
 
 # Install any dependencies (optional)
 RUN pip install --no-cache-dir -r /app/api/src/api/requirements.txt || true

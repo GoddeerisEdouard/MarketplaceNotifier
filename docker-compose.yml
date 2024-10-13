@@ -3,7 +3,7 @@ services:
   webserver:
     build:
       context: .
-      dockerfile: ./api/src/api/Dockerfile
+      dockerfile: ./api/Dockerfile
     container_name: webserver
     ports:
       - "5000:5000"
