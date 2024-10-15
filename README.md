@@ -37,7 +37,7 @@ Make sure you can ping the server locally via the `redis-cli`
 
 webserver to handle CRUD operations on listing queries
 ```python
-python api/src/api/webserver.py
+python api/webserver.py
 ```
 
 fetch new listings & sends them with Redis
