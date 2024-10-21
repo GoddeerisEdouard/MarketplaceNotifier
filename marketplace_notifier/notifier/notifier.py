@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import List, Optional, Type, Set, Dict
@@ -143,9 +144,13 @@ class INotifier(ABC):
 
             if len(new_parsed_listings_infos) == 0:
                 continue
-            # publish to subscribers
-            # reverse the new listings (old to new)
-            serialized_tweedehands_listing_infos = [x.to_json() for x in reversed(new_parsed_listings_infos)]
+
+            # order listings from OLD to NEW
+            # we do this by checking the ID (format m<numbers> )
+            # example: m123 is newer than m100 (because 123 comes after 100)
+            # so the smallest number will be first in list (as it's the oldest)
+            new_parsed_listings_infos.sort(key=lambda li: int(re.search(r"\d+", li.id).group(0)))
+            serialized_tweedehands_listing_infos = [li.to_json() for li in new_parsed_listings_infos]
             command = "NEW"
             data = json.dumps({"listings": serialized_tweedehands_listing_infos})
             msg = " ".join([command, query_url, data])
