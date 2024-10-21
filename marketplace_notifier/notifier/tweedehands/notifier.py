@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from marketplace_notifier.notifier.models import ListingLocation
@@ -40,6 +41,23 @@ class TweedehandsNotifier(INotifier):
                 "-").replace(
                 " ", "-").replace("'", "-").replace("é", "e") + "/" + str(
                 listing.seller_information.seller_id)
+
+            # parse Literal dates
+            if type(listing.date) is str:
+                # NOTE: these dates will all have the time from fetching, not the actual time the listing got posted
+                if listing.date == "Vandaag":
+                    listing.date = datetime.now()
+                elif listing.date == "Gisteren":
+                    listing.date = datetime.now() - timedelta(days=1)
+                elif listing.date == "Eergisteren":
+                    listing.date = datetime.now() - timedelta(days=2)
+
+            # we might also have to handle when the date is None
+
+            # ALTERNATIVE:
+            # if parsed_listing_info.date is None or type(parsed_listing_info.date) != datetime:
+            #     logging.warning("came across a listing which doensn't have a date set: {parsed_listing_info.title}")
+            #     - set date of object via set_posted_date()
 
             # TODO: add screenshot dependency
             # https://github.com/GoddeerisEdouard/ListingScreenshotter

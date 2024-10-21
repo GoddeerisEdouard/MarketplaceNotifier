@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Union, Literal
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -183,8 +183,7 @@ class Listing(BaseModel):
     description: str
     price_info: PriceInfo = Field(..., alias="priceInfo")
     location: Location
-    # date can be None and has to be set later via set_posted_date
-    date: Optional[datetime] = None
+    date: Optional[Union[datetime, Literal["Vandaag", "Gisteren", "Eergisteren"]]] = None
     image_urls: Optional[List[str]] = Field(None, alias="imageUrls")
     seller_information: SellerInformation = Field(..., alias="sellerInformation")
     category_id: int = Field(..., alias="categoryId")
