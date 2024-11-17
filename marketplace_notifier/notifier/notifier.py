@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import List, Optional, Type, Set, Dict
 
-import aiohttp
+from aiohttp_retry import RetryClient
 import redis.asyncio as redis
 
 from marketplace_notifier.db_models.models import QueryInfo, ListingInfo as ListingInfoDB
@@ -38,16 +38,16 @@ class INotifier(ABC):
 
         raise NotImplementedError()
 
-    async def _parse_listings_from_response(self, client_session: aiohttp.ClientSession, get_req_url: str) -> List[
+    async def _parse_listings_from_response(self, rc: RetryClient, get_req_url: str) -> List[
         Optional[IListingInfo]]:
         """
         helper method
         gets a raw json response with all listings of query & returns IListingInfo objects
-        :param client_session: session to use the send GET requests
+        :param rc: session to use the send GET requests
         :param get_req_url: GET request url to fetch all raw listings in json
         :return: a (empty) list of IListingInfo objects
         """
-        response_data = await get_request_response(client_session, get_req_url)
+        response_data = await get_request_response(rc, get_req_url)
         if response_data == "":
             logging.warning(f"No response data, here's the request URL you tried:\n{get_req_url}")
             return []
@@ -81,24 +81,24 @@ class INotifier(ABC):
         request_url = listing_specs.request_query_url
         await QueryInfo.create(request_url=request_url, marketplace=self.marketplace, query=listing_specs.query)
 
-    async def _fetch_listings_of_request_url(self, client_session: aiohttp.ClientSession, query_request_url: str) -> \
+    async def _fetch_listings_of_request_url(self, retry_client: RetryClient, query_request_url: str) -> \
             List[
                 Optional[Type[IListingInfo]]]:
         """
         fetches all listings and returns all parsed relevant listing info in a list
-        :param client_session: session to use the send GET requests
+        :param retry_client: session to use the send GET requests
         :param query_request_url: exact GET request url used to get all listings
         :return: list of parsed non-ad listing info objects
         """
 
-        new_non_ad_listings_infos = await self._parse_listings_from_response(client_session, query_request_url)
+        new_non_ad_listings_infos = await self._parse_listings_from_response(retry_client, query_request_url)
         return new_non_ad_listings_infos
 
-    async def fetch_all_query_urls(self, client_session: aiohttp.ClientSession) -> Dict[
+    async def fetch_all_query_urls(self, retry_client: RetryClient) -> Dict[
         str, List[Optional[Type[IListingInfo]]]]:
         """
         fetches the listings of all query urls
-        :param client_session: session to use the send GET requests
+        :param retry_client: session to use the send GET requests
         :return: {<query_url>: [<IListingInfo> non-ad listings]}
         """
         # update cached listing_urls
@@ -107,7 +107,7 @@ class INotifier(ABC):
 
         query_url_listing_infos: Dict[str, List[Optional[Type[IListingInfo]]]] = {}
         for request_url in self.listing_urls_for_requests:
-            parsed_non_ad_listings = await self._fetch_listings_of_request_url(client_session, request_url)
+            parsed_non_ad_listings = await self._fetch_listings_of_request_url(retry_client, request_url)
             query_url_listing_infos[request_url] = parsed_non_ad_listings
 
         return query_url_listing_infos

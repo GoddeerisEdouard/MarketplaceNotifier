@@ -1,8 +1,7 @@
-import aiohttp
-
+from aiohttp_retry import RetryClient
 
 async def test_create_query():
-    async with aiohttp.ClientSession() as cs:
+    async with RetryClient() as rc:
         data = {
             "query": "test query",
             "location_filter": {
@@ -11,7 +10,7 @@ async def test_create_query():
             },
             "price_range": None
         }
-        resp = await cs.post("http://localhost:5000/query/add", json=data)
+        resp = await rc.post("http://localhost:5000/query/add", json=data)
         assert resp.status == 200
         assert await resp.json() == {
             "browser_query_url": "",
@@ -27,7 +26,7 @@ async def test_create_query():
 
 
 async def test_duplicate_query():
-    async with aiohttp.ClientSession() as cs:
+    async with RetryClient() as rc:
         data = {
             "query": "test query",
             "location_filter": {
@@ -39,9 +38,9 @@ async def test_duplicate_query():
                 "max_price_cents": 5000
             }
         }
-        resp = await cs.post("http://localhost:5000/query/add", json=data)
+        resp = await rc.post("http://localhost:5000/query/add", json=data)
         assert resp.status == 200
 
-        resp = await cs.post("http://localhost:5000/query/add", json=data)
+        resp = await rc.post("http://localhost:5000/query/add", json=data)
         assert resp.status == 500
         assert await resp.json() == {"error": "Query already exists"}

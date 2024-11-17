@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import timedelta, datetime
 
-import aiohttp
+from aiohttp_retry import RetryClient, ExponentialRetry
 import redis.asyncio as redisaio
 from tortoise import run_async, Tortoise
 
@@ -13,13 +13,13 @@ from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifi
 FETCH_INTERVAL = 5 * 60  # 5 minutes
 logging.basicConfig(level=logging.INFO)
 
-async def fetch_listings(tn: TweedehandsNotifier, cs: aiohttp.ClientSession, redis_client: redisaio):
+async def fetch_listings(tn: TweedehandsNotifier, rc: RetryClient, redis_client: redisaio):
     """
     fetches listings every interval (based on the request_urls in the DB)
     """
     # fetch listings based on request_urls
     while True:
-        request_url_with_listings = await tn.fetch_all_query_urls(cs)
+        request_url_with_listings = await tn.fetch_all_query_urls(rc)
         await tn.process_listings(request_url_with_listings, redis_client)
         in_x_seconds = datetime.now() + timedelta(seconds=FETCH_INTERVAL)
         logging.info(f"Will now sleep until {in_x_seconds.strftime('%H:%M:%S')}")
@@ -41,7 +41,8 @@ async def run():
     redis_client = redisaio.StrictRedis(host=config["redis_host"])
 
     tn = TweedehandsNotifier()
-    async with aiohttp.ClientSession() as cs:
+    retry_options = ExponentialRetry() # default retry of 3, retry on all server errors (5xx)
+    async with RetryClient(retry_options=retry_options, raise_for_status=False) as cs:
         await fetch_listings(tn, cs, redis_client)
 
 

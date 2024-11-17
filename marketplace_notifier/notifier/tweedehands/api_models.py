@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, List, Union, Literal
 
-import aiohttp
+from aiohttp_retry import RetryClient
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field, HttpUrl, AliasChoices
 
@@ -201,9 +201,9 @@ class Listing(BaseModel):
     def url(self):
         return f"https://2dehands.be{self.vip_url}"
 
-    async def set_posted_date(self, client_session: aiohttp.ClientSession) -> None:
+    async def set_posted_date(self, rc: RetryClient) -> None:
         # aka: make it so the display_element always gets found
-        data = await get_request_response(client_session, self.url)
+        data = await get_request_response(rc, self.url)
         soup = BeautifulSoup(data, "html.parser")
         display_element = soup.find(id="displayed-since")
         if display_element is None:

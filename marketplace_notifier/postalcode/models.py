@@ -4,7 +4,7 @@ import urllib.parse
 from abc import ABC
 from typing import Optional, List, ClassVar
 
-import aiohttp
+from aiohttp_retry import RetryClient
 import pydantic
 from pydantic import BaseModel, Field, field_validator
 
@@ -27,13 +27,13 @@ class ILocationFilter(BaseModel, ABC):
 
 
     @classmethod
-    async def get_valid_postal_code_and_city(cls, client_session: aiohttp.ClientSession,
+    async def get_valid_postal_code_and_city(cls, retry_client: RetryClient,
                                              postal_code_or_city: str) -> Optional[dict]:
         """
         helper method to get the postal code of a given city or the city of a given postal code
         city can be either in French or Dutch
         should be called AFTER the class is initialized to validate the fields once more
-        :param client_session: used to make the GET request for the postal code data
+        :param retry_client: used to make the GET request for the postal code data
         :param postal_code_or_city: a postal code or a city (Dutch or French)
         :return: None if invalid postal_code_or_city, else a dict of  the postal code with its matching city in Dutch
         """
@@ -44,7 +44,7 @@ class ILocationFilter(BaseModel, ABC):
             return
 
         api_url = f"https://opzoeken-postcode.be/{urllib.parse.quote_plus(postal_code_or_city_normalized)}.json"
-        response = await get_request_response(client_session, api_url)
+        response = await get_request_response(retry_client, api_url)
         response_json = json.loads(response)
         if response_json:
             for postal_code_and_city_model in response_json:

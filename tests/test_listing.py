@@ -1,5 +1,5 @@
-import aiohttp
 import redis.asyncio as redis
+from aiohttp_retry import RetryClient
 from tortoise.contrib import test
 
 from marketplace_notifier.db_models.models import QueryInfo, ListingInfo
@@ -57,8 +57,8 @@ class TestListingInfo(test.TestCase):
         query = "iphone"
         invalid_city = "invalid city"
         radius = 5
-        async with aiohttp.ClientSession() as cs:
-            postal_code_and_city = await TweedehandsLocationFilter.get_valid_postal_code_and_city(cs, invalid_city)
+        async with RetryClient() as rc:
+            postal_code_and_city = await TweedehandsLocationFilter.get_valid_postal_code_and_city(rc, invalid_city)
 
         tqs = TweedehandsQuerySpecs(query=query, location_filter=TweedehandsLocationFilter(city=postal_code_and_city["city"], postal_code=postal_code_and_city["postal_code"],
                                   radius=radius) if postal_code_and_city else None)
@@ -73,8 +73,8 @@ class TestListingInfo(test.TestCase):
         request_url = TweedehandsQuerySpecs(query=query).request_query_url
         await QueryInfo.create(request_url=request_url, marketplace=tn.marketplace, query=query)
 
-        async with aiohttp.ClientSession() as cs:
-            request_url_with_listings = await tn.fetch_all_query_urls(cs)
+        async with RetryClient() as rc:
+            request_url_with_listings = await tn.fetch_all_query_urls(rc)
 
         self.assertEqual(await ListingInfo.all().count(), 0)
 

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-import aiohttp
 import tortoise
+from aiohttp_retry import RetryClient
 from quart import Quart
 from quart_schema import validate_request, QuartSchema, RequestSchemaValidationError
 from tortoise import Tortoise
@@ -28,13 +28,13 @@ async def startup():
         db_url=DEFAULT_DB_URL,
         modules={"models": ["marketplace_notifier.db_models.models"]}
     )
-    app.cs = aiohttp.ClientSession()
+    app.rc = RetryClient
 
 
 @app.after_serving
 async def close_db():
     await Tortoise.close_connections()
-    await app.cs.close()
+    await app.rc.close()
 
 
 @dataclass
@@ -54,7 +54,7 @@ class QueryIn:
 @app.post("/query/add")
 @validate_request(QueryIn)
 async def create_query(data: QueryIn):
-    city_and_postal_code = await TweedehandsLocationFilter.get_valid_postal_code_and_city(client_session=app.cs,
+    city_and_postal_code = await TweedehandsLocationFilter.get_valid_postal_code_and_city(retry_client=app.rc,
                                                                                           postal_code_or_city=data.location_filter.city_or_postal_code) if data.location_filter else None
     # validate filters
     lf = TweedehandsLocationFilter(city=city_and_postal_code['city'],
