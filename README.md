@@ -1,14 +1,12 @@
 # MarketplaceNotifier
 
-monitor and get notified for your queried marketplace listings  
-A `Notifier` object with public methods.  
-It's then up to the client to process the returned data through Redis pubsub.  
-More info about how to subscribe in the [FYI](#fyi)
+Get notified for new *marketplace* listings  
 
-marketplaces:
+supported *marketplaces*:
 
-- [ ] [2dehands](https://www.2dehands.be) / [2ememain](https://www.2ememain.be)
-- [ ] [facebook marketplace](https://www.facebook.com/marketplace)
+- [x] [2dehands](https://www.2dehands.be) / [2ememain](https://www.2ememain.be)
+
+More info on how to receive notifications in [implementation](#implementation)
 
 ## Table of contents
 
@@ -35,7 +33,7 @@ marketplaces:
 A **redis server** should be running on port 6379
 Make sure you can ping the server locally via the `redis-cli`
 
-webserver to handle CRUD operations on listing queries
+webserver to [handle CRUD operations](#implementation) on listing queries
 ```python
 python api/webserver.py
 ```
@@ -65,54 +63,12 @@ Based on the queries in the DB, it will check for new listings and process them 
 INotifier.
 
 ## Implementation
-
 ways to communicate with the notifier  
-! make sure the Redis [server is running](#executing-program)
 
+! make sure the Redis [server is running](#executing-program) 
 ### commands
-
-**ADD** queries to monitor
-- `POST localhost:5000/query/add`
-```yaml
-{
-  "query": "...",
-  "location_filter": {
-    "cityOrPostalCode": "...",
-    "radius": 10
-  },
-  "price_range": {
-    "min_price_cents": 0,
-    "max_price_cents": 100000
-  }
-}
-```
-> ! `location_filter` and `price_range` can be null
-
-python example:
-```python
-import requests
-
-WEBSERVER_URL = 'localhost:5000'
-payload = 
-        {"query": query, 
-        "location_filter": {"cityOrPostalCode": cityOrPostalCode, "radius": radius},
-        "price_range": {"min_price_cents": 0, "max_price_cents": 100000}
-        }
-response = requests.post(f'http://{WEBSERVER_URL}/query/add', json=payload)
-response_data = response.json()
-```
----
-
-**GET** queries to monitor  
-get all queryinfo objects
-- `GET localhost:5000/query/`
-
-get queryinfo object by ID
-- `GET localhost:5000/query/<query_info_id>`
----
-
-**DELETE** query
-- `DELETE localhost:5000/query/<query_info_id>`
+Check out the webserver [API spec](api/webserver_api_spec.yaml) to know which endpoints you can use to manage your queries.  
+You can paste the spec in [Swagger](https://editor.swagger.io/) to have a UI.
 
 ### discord bot
 example of how to handle new listings with [Redis pubsub](https://redis-py.readthedocs.io/en/stable/advanced_features.html#publish-subscribe)
@@ -168,11 +124,12 @@ class MyCog(commands.Cog):
 ```
 
 ## FYI
+Queries are a combination of the name of the listing you're using for + some filters (price / location)  
 
-queries to be monitored are stored in a DB.  
+Queries to be monitored are stored in a DB.  
 This is to cache already seen listings and update when new ones arrive.
 
-new listings are sent with Redis to the `'listings'` channel.  
+New listings are sent with Redis to the `'listings'` channel.  
 a webserver is running (on `http://localhost:5000`) to handle the commands
 
 ## Help

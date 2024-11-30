@@ -1,0 +1,195 @@
+openapi: 3.0.0
+info:
+  title: Marketplace Notifier API
+  version: 1.0.0
+  description: API for managing marketplace queries (add, remove, get). Check out the examples.
+servers:
+  - url: http://localhost:5000
+paths:
+  /query/add:
+    post:
+      summary: Add a new query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                location_filter:
+                  type: object
+                  properties:
+                    city_or_postal_code:
+                      type: string
+                    radius:
+                      type: integer
+                price_range:
+                  type: object
+                  properties:
+                    min_price_cents:
+                      type: integer
+                    max_price_cents:
+                      type: integer
+            examples:
+              minimal:
+                summary: minimal example
+                value:
+                  query: iPad
+              full:
+                summary: full example using all properties
+                value:
+                  query: iPhone 14 Pro
+                  location_filter:
+                    city_or_postal_code: "9000"
+                  price_range:
+                    min_price_cents: 0
+                    max_price_cents: 10000
+
+      responses:
+        '200':
+          description: Query created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, query, browser_query_url, request_query_url]
+                properties:
+                  id:
+                    type: integer
+                  query:
+                    type: string
+                  browser_query_url:
+                    type: string
+                  location_filter:
+                    type: object
+                    properties:
+                      city:
+                        type: string
+                      postal_code:
+                        type: integer
+                      radius:
+                        type: integer
+                  price_range:
+                    type: object
+                    properties:
+                      min_price_cents:
+                        type: integer
+                      max_price_cents:
+                        type: integer
+                  request_query_url:
+                    type: string
+              examples:
+                minimal:
+                  summary: response of minimal request
+                  value:
+                    id: 0
+                    query: iPad
+                    browser_query_url: "https://www.2dehands.be/q/ipad/#Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING|searchInTitleAndDescription:true"
+                    request_query_url: "https://www.2dehands.be/lrp/api/search?attributesByKey[]=Language%3Aall-languages&attributesByKey[]=offeredSince%3AGisteren&limit=30&offset=0&query=ipad&searchInTitleAndDescription=true&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view"
+                    location_filter: null
+                    price_range: null
+
+        '500':
+          description: Query already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: Query already exists
+  /query:
+    get:
+      summary: Get all queries
+      responses:
+        '200':
+          description: A list of queries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    request_url:
+                      type: string
+                    marketplace:
+                      type: string
+                    query:
+                      type: string
+  /query/{query_info_id}:
+    get:
+      summary: Get a query by ID
+      parameters:
+        - in: path
+          name: query_info_id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the query
+      responses:
+        '200':
+          description: Query details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  query:
+                    type: string
+                  request_query_url:
+                    type: string
+                  marketplace:
+                    type: string
+        '404':
+          description: Query not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: Not Found
+    delete:
+      summary: Delete a query by ID
+      parameters:
+        - in: path
+          name: query_info_id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the query
+      responses:
+        '200':
+          description: Query deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: Query deleted
+  /ping:
+    get:
+      summary: Ping the server
+      responses:
+        '200':
+          description: Server is alive
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: pong
