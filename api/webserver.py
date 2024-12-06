@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import tortoise
-from aiohttp_retry import RetryClient
+from aiohttp_retry import RetryClient, ExponentialRetry
 from quart import Quart
 from quart_schema import validate_request, QuartSchema, RequestSchemaValidationError
 from tortoise import Tortoise
@@ -17,7 +17,7 @@ from config.config import config
 DEFAULT_DB_URL = f"sqlite://{config['database_path']}/db.sqlite3"
 
 app = Quart(__name__)
-app.rc = RetryClient()
+app.rc = None
 QuartSchema(app)
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -29,6 +29,8 @@ async def startup():
         db_url=DEFAULT_DB_URL,
         modules={"models": ["marketplace_notifier.db_models.models"]}
     )
+    retry_options = ExponentialRetry()  # default retry of 3, retry on all server errors (5xx)
+    app.rc = RetryClient(retry_options=retry_options, raise_for_status=False)
 
 
 @app.after_serving
