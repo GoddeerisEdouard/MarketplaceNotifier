@@ -17,6 +17,7 @@ from config.config import config
 DEFAULT_DB_URL = f"sqlite://{config['database_path']}/db.sqlite3"
 
 app = Quart(__name__)
+app.rc = RetryClient()
 QuartSchema(app)
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -28,7 +29,6 @@ async def startup():
         db_url=DEFAULT_DB_URL,
         modules={"models": ["marketplace_notifier.db_models.models"]}
     )
-    app.rc = RetryClient
 
 
 @app.after_serving

@@ -43,7 +43,7 @@ class TestTweedehandsNotifier(unittest.IsolatedAsyncioTestCase):
                                                                                                    query_specs_without_location_filter.request_query_url)
 
             # with location filter
-            city_and_postal_code = await TweedehandsLocationFilter.get_valid_postal_code_and_city(client_session=rc,
+            city_and_postal_code = await TweedehandsLocationFilter.get_valid_postal_code_and_city(retry_client=rc,
                                                                                                   postal_code_or_city=stad)
             tlf = TweedehandsLocationFilter(city=city_and_postal_code["city"],
                                             postal_code=city_and_postal_code["postal_code"], radius=radius)
