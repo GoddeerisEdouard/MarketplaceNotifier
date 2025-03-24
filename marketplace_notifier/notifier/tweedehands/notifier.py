@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
+from pydantic import ValidationError
 
 from marketplace_notifier.notifier.models import ListingLocation
 from marketplace_notifier.notifier.notifier import INotifier
@@ -31,7 +32,15 @@ class TweedehandsNotifier(INotifier):
         # only return listings which aren't ads
         parsed_non_ad_tweedehands_listings = []
         for raw_listing in raw_listings_response["listings"]:
-            listing = api_models.Listing(**raw_listing)
+            try:
+                listing = api_models.Listing(**raw_listing)
+            except ValidationError as e:
+                logging.error(f"Validation error while parsing listing\n{e}")
+                continue
+            except Exception as e:
+                logging.error(f"Unexpected error while parsing listing\n{e}")
+                continue
+
             if listing.is_ad():
                 continue
 
