@@ -1,0 +1,182 @@
+{
+  "antiek-en-kunst": {
+    "fullName": "Antiek en Kunst",
+    "id": 1,
+    "name": "Antiek en Kunst"
+  },
+  "audio-tv-en-foto": {
+    "fullName": "Audio, Tv en Foto",
+    "id": 31,
+    "name": "Audio, Tv en Foto"
+  },
+  "auto-diversen": {
+    "fullName": "Auto diversen",
+    "id": 48,
+    "name": "Auto diversen"
+  },
+  "auto-s": {
+    "fullName": "Auto's",
+    "id": 91,
+    "name": "Auto's"
+  },
+  "auto-onderdelen": {
+    "fullName": "Auto-onderdelen",
+    "id": 2600,
+    "name": "Auto-onderdelen"
+  },
+  "boeken": {
+    "fullName": "Boeken",
+    "id": 201,
+    "name": "Boeken"
+  },
+  "caravans-en-kamperen": {
+    "fullName": "Caravans en Kamperen",
+    "id": 289,
+    "name": "Caravans en Kamperen"
+  },
+  "cd-s-en-dvd-s": {
+    "fullName": "Cd's en Dvd's",
+    "id": 1744,
+    "name": "Cd's en Dvd's"
+  },
+  "computers-en-software": {
+    "fullName": "Computers en Software",
+    "id": 322,
+    "name": "Computers en Software"
+  },
+  "contacten-en-berichten": {
+    "fullName": "Contacten en Berichten",
+    "id": 378,
+    "name": "Contacten en Berichten"
+  },
+  "diensten-en-vakmensen": {
+    "fullName": "Diensten en Vakmensen",
+    "id": 1098,
+    "name": "Diensten en Vakmensen"
+  },
+  "dieren-en-toebehoren": {
+    "fullName": "Dieren en Toebehoren",
+    "id": 395,
+    "name": "Dieren en Toebehoren"
+  },
+  "doe-het-zelf-en-bouw": {
+    "fullName": "Doe-het-zelf en Bouw",
+    "id": 239,
+    "name": "Doe-het-zelf en Bouw"
+  },
+  "elektronische-apparatuur": {
+    "fullName": "Elektronische apparatuur",
+    "id": 537,
+    "name": "Elektronische apparatuur"
+  },
+  "fietsen-en-brommers": {
+    "fullName": "Fietsen en Brommers",
+    "id": 445,
+    "name": "Fietsen en Brommers"
+  },
+  "games-en-spelcomputers": {
+    "fullName": "Games en Spelcomputers",
+    "id": 356,
+    "name": "Games, Spelcomputers"
+  },
+  "handtassen-en-accessoires": {
+    "fullName": "Handtassen en Accessoires",
+    "id": 1826,
+    "name": "Handtassen en Accessoires"
+  },
+  "hobby-en-vrije-tijd": {
+    "fullName": "Hobby en Vrije tijd",
+    "id": 1099,
+    "name": "Hobby en Vrije tijd"
+  },
+  "huis-en-inrichting": {
+    "fullName": "Huis en Inrichting",
+    "id": 504,
+    "name": "Huis en Inrichting"
+  },
+  "immo": {
+    "fullName": "Immo",
+    "id": 1032,
+    "name": "Immo"
+  },
+  "kinderen-en-baby-s": {
+    "fullName": "Kinderen en Baby's",
+    "id": 565,
+    "name": "Kinderen en Baby's"
+  },
+  "kleding-dames": {
+    "fullName": "Kleding | Dames",
+    "id": 621,
+    "name": "Kleding | Dames"
+  },
+  "kleding-heren": {
+    "fullName": "Kleding | Heren",
+    "id": 1776,
+    "name": "Kleding | Heren"
+  },
+  "motoren": {
+    "fullName": "Motoren",
+    "id": 678,
+    "name": "Motoren"
+  },
+  "muziek-en-instrumenten": {
+    "fullName": "Muziek en Instrumenten",
+    "id": 728,
+    "name": "Muziek en Instrumenten"
+  },
+  "postzegels-en-munten": {
+    "fullName": "Postzegels en Munten",
+    "id": 1784,
+    "name": "Postzegels en Munten"
+  },
+  "sport-en-fitness": {
+    "fullName": "Sport en Fitness",
+    "id": 784,
+    "name": "Sport en Fitness"
+  },
+  "telecommunicatie": {
+    "fullName": "Telecommunicatie",
+    "id": 820,
+    "name": "Telecommunicatie"
+  },
+  "tickets-en-kaartjes": {
+    "fullName": "Tickets en Kaartjes",
+    "id": 1984,
+    "name": "Tickets en Kaartjes"
+  },
+  "tuin-en-terras": {
+    "fullName": "Tuin en Terras",
+    "id": 1847,
+    "name": "Tuin en Terras"
+  },
+  "vacatures": {
+    "fullName": "Vacatures",
+    "id": 167,
+    "name": "Vacatures"
+  },
+  "vakantie": {
+    "fullName": "Vakantie",
+    "id": 856,
+    "name": "Vakantie"
+  },
+  "verzamelen": {
+    "fullName": "Verzamelen",
+    "id": 895,
+    "name": "Verzamelen"
+  },
+  "watersport-en-boten": {
+    "fullName": "Watersport en Boten",
+    "id": 976,
+    "name": "Watersport en Boten"
+  },
+  "zakelijke-goederen": {
+    "fullName": "Zakelijke goederen",
+    "id": 1085,
+    "name": "Zakelijke goederen"
+  },
+  "diversen": {
+    "fullName": "Diversen",
+    "id": 428,
+    "name": "Diversen"
+  }
+}

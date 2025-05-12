@@ -1,5 +1,8 @@
+import json
+import urllib.parse
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import urlencode, quote_plus
 
 import tortoise
 from aiohttp_retry import RetryClient, ExponentialRetry
@@ -21,6 +24,10 @@ app.rc = None
 QuartSchema(app)
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
+with open("l1_categories.json", "r") as f:
+    l1_category_dict = json.load(f)
+with open("l2_categories.json", "r") as f:
+    l2_category_dict = json.load(f)
 
 
 @app.before_serving
@@ -83,6 +90,76 @@ async def create_query(data: QueryIn):
     return_model = tqs.model_dump()
     return_model['id'] = qi.id
     return return_model, 200
+
+
+# INPUT: {"browser_url": "https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING"}
+@app.post("/query/add_link")
+async def create_query_by_link(data):
+    # add query by browser url
+    # this is preferred, as we don't have to locally check/validate if the location filter & price filter etc are correct
+    # store it in the DB with a unique ID
+    # return a nice json object with all relevant info after parsing
+    # ! don't send a request yet! all we're doing is adding our parsed link in our DB!
+    parsed_browser_url = urllib.parse.urlparse(data.browser_url)
+    fragment = parsed_browser_url.fragment or []
+    params = dict(param.split(':', 1) for param in fragment.split('|'))
+
+    # example browser_url to better understand the parsing:
+    # https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING
+    # or
+    # https://www.2dehands.be/l/games-en-spelcomputers/#q:ps5|Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING
+    path_parts = parsed_browser_url.path.strip('/').split('/')
+
+    l1_category_name = None
+    l2_category_name = None
+    query_params = {
+        "attributesByKey[]": ["Language:all-languages", "offeredSince:Gisteren"],
+        "limit": 30,  # sometimes, even when we post a listing, it instantly gets on the second or even third page
+        # even when the listings are sorted by date...: this makes sure we fetch all listings from the first 3 (and a half) pages
+        # so we might have to increase the limit in the future
+        "offset": 0,
+        "sortBy": "SORT_INDEX",
+        "sortOrder": "DECREASING",
+        "viewOptions": "list-view"
+    }
+    if path_parts[0] == "l":
+        # queried with a category as filter
+        l1_category_name = path_parts[1]
+        query_params["l1CategoryId"] = l1_category_dict.get(l1_category_name)["id"]
+        if len(path_parts) > 2:
+            l2_category_name = path_parts[2]
+            query_params["l2CategoryId"]: l2_category_dict.get(l1_category_name).get(l2_category_name)["id"]  # only set if there's a subcategory
+
+        if query := params.get("q"):
+            query_params["query"] = query
+    elif path_parts[0] == "q":
+        # query without a category
+        query_params["query"] = path_parts[1]
+
+    if postcode := params.get("postcode"):
+        query_params["postcode"] = postcode
+        # because we only want to add a distance if there's a postcode
+        if distance := params.get("distanceMeters"):
+            query_params["distanceMeters"] = distance
+
+    if postcode := params.get("postcode"):
+        query_params["postcode"] = postcode
+        # because we only want to add a distance if there's a postcode
+        if distance := params.get("distanceMeters"):
+            query_params["distanceMeters"] = distance
+
+    query_string = urlencode(query_params, doseq=True, quote_via=quote_plus)
+
+    full_request_url = "https://www.2dehands.be/lrp/api/search?" + query_string
+    try:
+        qi = await QueryInfo.create(request_url=full_request_url, marketplace='TWEEDEHANDS',
+                                    query=query_params["query"])
+    except tortoise.exceptions.IntegrityError:
+        return {
+            "error": "Query already exists",
+        }, 500
+
+    return qi, 200
 
 
 @app.get("/query")

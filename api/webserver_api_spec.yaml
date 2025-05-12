@@ -103,6 +103,77 @@ paths:
                     type: string
                 example:
                   error: Query already exists
+  /query/add_link:
+    post:
+      summary: Create a new search query from a 2dehands.be browser URL
+      description: >
+        Accepts a full browser URL from 2dehands.be and parses it to extract query parameters.
+        The parsed query is stored in the database. No actual search is performed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                browser_url:
+                  type: string
+                  format: uri
+                  description: A full browser URL copied from a 2dehands.be search
+              required:
+                - browser_url
+            examples:
+              SimpleQuery:
+                summary: Basic query without category
+                value:
+                  browser_url: "https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING"
+              CategoryQuery:
+                summary: Query with category filter
+                value:
+                  browser_url: "https://www.2dehands.be/l/games-en-spelcomputers/#q:ps5|Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING"
+              WithPostcode:
+                summary: Query with postcode and distance
+                value:
+                  browser_url: "https://www.2dehands.be/q/fiets/#postcode:2000|distanceMeters:5000|sortBy:SORT_INDEX|sortOrder:DECREASING"
+              SubcategoryQuery:
+                summary: Query with L1 and L2 categories
+                value:
+                  browser_url: "https://www.2dehands.be/l/auto-onderdelen/banden/#q:michelin|sortBy:SORT_INDEX|sortOrder:DECREASING"
+      responses:
+        '200':
+          description: Successfully parsed and stored query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  request_url:
+                    type: string
+                  marketplace:
+                    type: string
+                  query:
+                    type: string
+              examples:
+                minimal:
+                  summary: response of minimal request
+                  value:
+                    id: 0
+                    query: iPhone 15 pro
+                    browser_query_url: "https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING"
+                    request_query_url: "https://www.2dehands.be/lrp/api/search?attributesByKey[]=Language%3Aall-languages&attributesByKey[]=offeredSince%3AGisteren&limit=30&offset=0&query=iphone+15+pro&searchInTitleAndDescription=true&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view"
+        '500':
+          description: Query already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: Query already exists
   /query:
     get:
       summary: Get all queries
