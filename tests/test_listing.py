@@ -2,10 +2,10 @@ import redis.asyncio as redis
 from aiohttp_retry import RetryClient
 from tortoise.contrib import test
 
-from marketplace_notifier.db_models.models import QueryInfo, ListingInfo
-from marketplace_notifier.notifier.models import PriceRange
-from marketplace_notifier.notifier.tweedehands.models import TweedehandsQuerySpecs, TweedehandsLocationFilter
-from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
+from src.shared.models import QueryInfo, ListingInfo
+from src.marketplace_notifier.notifier.models import PriceRange
+from src.marketplace_notifier.notifier.tweedehands.models import TweedehandsQuerySpecs, TweedehandsLocationFilter
+from src.marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
 
 TEST_DB_URL = "sqlite://test-db.sqlite"
 
@@ -14,7 +14,7 @@ class TestListingInfo(test.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        test.initializer(["marketplace_notifier.db_models.models"], db_url=TEST_DB_URL)
+        test.initializer(["src.shared.models"], db_url=TEST_DB_URL)
 
     @classmethod
     def tearDownClass(cls):

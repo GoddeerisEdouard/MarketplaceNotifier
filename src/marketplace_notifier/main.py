@@ -1,17 +1,37 @@
 import asyncio
 import logging
+import sys
 from datetime import timedelta, datetime
 
 from aiohttp_retry import RetryClient, ExponentialRetry
 import redis.asyncio as redisaio
 from tortoise import run_async, Tortoise
 
-from api.webserver import DEFAULT_DB_URL
 from config.config import config
-from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
+from notifier.tweedehands.notifier import TweedehandsNotifier
 
 FETCH_INTERVAL = 5 * 60  # 5 minutes
-logging.basicConfig(level=logging.INFO)
+# Create a custom logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# File handler
+file_handler = logging.FileHandler('requests.log', encoding='utf-8')
+file_handler.setFormatter(formatter)
+
+# Console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+
+# Clear previous handlers (important when using in notebooks or reloading modules)
+if logger.hasHandlers():
+    logger.handlers.clear()
+
+for handler in [file_handler, console_handler]:
+    logger.addHandler(handler)
 
 async def fetch_listings(tn: TweedehandsNotifier, rc: RetryClient, redis_client: redisaio):
     """
@@ -32,8 +52,8 @@ async def run():
     sends new listings to the pubsub channel after every interval
     """
     await Tortoise.init(
-        db_url=DEFAULT_DB_URL,
-        modules={'models': ['marketplace_notifier.db_models.models']}
+        db_url=config["default_db_url"],
+        modules={'models': ['src.shared.models']}
     )
     await Tortoise.generate_schemas()
 

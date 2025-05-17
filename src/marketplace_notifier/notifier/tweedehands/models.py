@@ -2,8 +2,8 @@ import urllib.parse
 
 from pydantic import computed_field
 
-from marketplace_notifier.notifier.models import IQuerySpecs
-from marketplace_notifier.postalcode.models import ILocationFilter
+from src.marketplace_notifier.notifier.models import IQuerySpecs
+from src.marketplace_notifier.postalcode.models import ILocationFilter
 
 
 class TweedehandsQuerySpecs(IQuerySpecs):

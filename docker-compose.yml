@@ -3,7 +3,7 @@ services:
   webserver:
     build:
       context: .
-      dockerfile: ./api/Dockerfile
+      dockerfile: src/api/Dockerfile
     container_name: webserver
     ports:
       - "5000:5000"
@@ -23,7 +23,7 @@ services:
   redis_pubsub:
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: src/marketplace_notifier/Dockerfile
     container_name: redis_pubsub
     depends_on:
       - webserver

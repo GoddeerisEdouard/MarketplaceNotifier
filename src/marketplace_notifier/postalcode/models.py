@@ -8,7 +8,7 @@ from aiohttp_retry import RetryClient
 import pydantic
 from pydantic import BaseModel, Field, field_validator
 
-from marketplace_notifier.utils.api_utils import get_request_response
+from src.marketplace_notifier.utils.api_utils import get_request_response
 
 BELGIAN_POSTAL_CODE_REGEX = "^[1-9]{1}[0-9]{3}$"
 BELGIAN_CITY_REGEX = "^[A-Za-zÀ-ÿ\\.'*`´’,\\- \"]{1,34}$"

@@ -1,10 +1,14 @@
+import asyncio
 import unittest
 
 from aiohttp_retry import RetryClient
 
-from marketplace_notifier.notifier.tweedehands.models import TweedehandsLocationFilter, TweedehandsQuerySpecs
-from marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
-from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
+from src.marketplace_notifier.notifier.tweedehands.models import TweedehandsLocationFilter, TweedehandsQuerySpecs
+from src.marketplace_notifier.notifier.tweedehands.notifier import TweedehandsNotifier
+from src.marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
+
+# https://www.reddit.com/r/learnpython/comments/11q8i08/comment/jc7fb6a/
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class TestTweedehandsNotifier(unittest.IsolatedAsyncioTestCase):

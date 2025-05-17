@@ -4,9 +4,6 @@ from typing import Optional, Dict
 
 from aiohttp_retry import RetryClient
 
-logging.basicConfig(level=logging.INFO, filename="requests.log",
-                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", encoding="utf-8")
-
 async def get_request_response(retry_client: RetryClient, URI: str,
                                headers: Optional[Dict] = None) -> str:
     """
@@ -21,6 +18,11 @@ async def get_request_response(retry_client: RetryClient, URI: str,
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"})
 
     logging.info("making request for %s", URI)
+    # TODO: handle exception when we lose connection (or when server refuses)
+    """
+    raise ClientConnectorError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2dehands.be:443 ssl:False [Temporary failure in name resolution]
+    """
     async with retry_client.get(URI, headers=headers, ssl=False) as response:
         if response.status == HTTPStatus.OK:
             return await response.text()

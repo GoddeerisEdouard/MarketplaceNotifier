@@ -8,9 +8,9 @@ from typing import List, Optional, Type, Set, Dict
 from aiohttp_retry import RetryClient
 import redis.asyncio as redis
 
-from marketplace_notifier.db_models.models import QueryInfo, ListingInfo as ListingInfoDB
-from marketplace_notifier.notifier.models import IListingInfo, IQuerySpecs
-from marketplace_notifier.utils.api_utils import get_request_response
+from src.shared.models import QueryInfo, ListingInfo as ListingInfoDB
+from src.marketplace_notifier.notifier.models import IListingInfo, IQuerySpecs
+from src.marketplace_notifier.utils.api_utils import get_request_response
 
 
 class INotifier(ABC):

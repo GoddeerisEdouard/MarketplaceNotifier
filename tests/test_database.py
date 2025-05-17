@@ -4,7 +4,7 @@ import pytest
 import tortoise.exceptions
 from tortoise.contrib import test
 
-from marketplace_notifier.db_models.models import QueryInfo, Marketplace
+from src.shared.models import QueryInfo, Marketplace
 
 TEST_DB_URL = "sqlite://test-db.sqlite"
 
@@ -12,8 +12,7 @@ TEST_DB_URL = "sqlite://test-db.sqlite"
 class TestDatabaseFunctionality(test.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Tortoise.init_models(["marketplace_notifier.db_models.models"], "models")
-        test.initializer(["marketplace_notifier.db_models.models"], db_url=TEST_DB_URL)
+        test.initializer(["src.shared.models"], db_url=TEST_DB_URL)
 
     @classmethod
     def tearDownClass(cls):

@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from marketplace_notifier.notifier.models import IListingInfo
+from src.marketplace_notifier.notifier.models import IListingInfo
 
 
 class TweedehandsListingInfo(IListingInfo):

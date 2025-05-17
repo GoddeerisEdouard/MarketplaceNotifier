@@ -18,6 +18,7 @@ def load_config():
         config_dict["database_path"] = resolved_path
     elif env == "docker":
         config_dict["database_path"] = config[env]["database_path"]
+    config_dict["default_db_url"] = f"sqlite://{config_dict['database_path']}/db.sqlite3"
 
     return config_dict
 

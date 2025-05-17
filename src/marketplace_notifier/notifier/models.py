@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from marketplace_notifier.postalcode.models import ILocationFilter
+from src.marketplace_notifier.postalcode.models import ILocationFilter
 
 
 # NOTE: these classes are used as input / output models when using functions

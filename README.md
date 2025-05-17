@@ -1,12 +1,33 @@
 # MarketplaceNotifier
+## What is this?
+A service to get notified the second a great deal is listed.  
 
-Get notified for new *marketplace* listings  
+supported *marketplace* (so far):
+- [x] [2dehands](https://www.2dehands.be)
 
-supported *marketplaces*:
+## How does this work?
+You simply copy the marketplace link of your web browser and send it in a POST request to the webserver.  
+Afterwards, the Redis server will send - if there is any - new listings data (every 5 minutes).  
 
-- [x] [2dehands](https://www.2dehands.be) / [2ememain](https://www.2ememain.be)
+Simple example:  
+> get notified whenever a new iPhone 15 Pro gets listed
+> ```sh
+> curl -X POST http://localhost:5000/query/add_link \
+>      -H "Content-Type: application/json" \
+>      -d '{"browser_url": "https://www.2dehands.be/q/iphone+15+pro/"}'
+> ```
 
-More info on how to receive notifications in [implementation](#implementation)
+Now you're automatically monitoring new listings for that browser_url.  
+
+Next step is to handle the incoming new listings data (with Redis).  
+New listings data is being sent in the `listings` channel in this format:   
+`NEW <request_url> {"listings": [<serialized TweedehandsListingInfo objects>]}`  
+You can split by the first 2 spaces to get a list with:
+```python
+['NEW', 'https://www.2dehands.be/q/iphone+15+pro/', '{"listings": [<serialized TweedehandsListingInfo objects>]']
+```
+
+Here's an [example](#discord-bot) of handling these messages in discord.py.
 
 ## Table of contents
 
@@ -15,9 +36,8 @@ More info on how to receive notifications in [implementation](#implementation)
   * [Installing](#installing)
     * [Locally](#locally)
     * [Dockerized](#dockerized)
-  * [Executing program](#executing-program)
 * [Implementation](#implementation)
-  * [commands](#commands)
+  * [Add / Delete / Get links to monitor](#add--delete--get-links-to-monitor)
   * [discord bot](#discord-bot)
 * [FYI](#fyi)
 * [Help](#help)
@@ -26,59 +46,61 @@ More info on how to receive notifications in [implementation](#implementation)
 ## Getting Started
 ### Pre-requisites
 * tested on **Python 3.9**
-  [requirements.txt](requirements.txt) contains all Python packages needed.
+  [requirements.txt](src/marketplace_notifier/requirements.txt) contains all Python packages needed.
 
 ### Installing
 #### Locally
-A **redis server** should be running on port 6379
-Make sure you can ping the server locally via the `redis-cli`
+A **redis server** should be running on port 6379  
+Test if the server is running by pinging with `redis-cli`.
 
-webserver to [handle CRUD operations](#implementation) on listing queries
-```python
-python api/webserver.py
+webserver to [handle CRUD operations](#implementation) on listing queries  
+If on windows, you have to add to PYTHONPATH first to fix some relative imports  
+`set PYTHONPATH=%PYTHONPATH%;C:\Users\Admin\Documents\Some Other Folder\MarketplaceNotifier`
+```sh
+python3 -m venv webserver-venv
+source webserver-venv/bin/activate
+# or on Windows: webserver-venv\Scripts\activate 
+pip3 install -r src/api/requirements.txt
+python src/api/webserver.py
 ```
 
 fetch new listings & sends them with Redis
-```python
-python main.py
+
+`set PYTHONPATH=%PYTHONPATH%;C:\Users\Admin\Documents\Some Other Folder\MarketplaceNotifier`
+```sh
+python3 -m venv notifier-venv
+source notifier-venv/bin/activate
+# or on Windows: notifier-venv\Scripts\activate 
+pip3 install -r src/marketplace_notifier/requirements.txt
+python src/marketplace_notifier/main.py
 ```
 
 #### Dockerized
 ```shell
-docker-compose up -d --build
-```
-
-This starts:
-- the Redis server
-- the webserver
-- the notifier (which checks for new listings)
-
-### Executing program
-```shell
 docker-compose up -d
 ```
 
-the program will run and check for new listings every 5 minutes.
-Based on the queries in the DB, it will check for new listings and process them through the process_listings method in
-INotifier.
+This starts 3 services:
+- the Redis server (handling new listings)
+- webserver (Adding/Deleting/Getting queries)
+- the notifier (which checks for new listings & sends them to a channel in the Redis server)
 
 ## Implementation
 ways to communicate with the notifier  
 
-! make sure the Redis [server is running](#executing-program) 
-### commands
-Check out the webserver [API spec](api/webserver_api_spec.yaml) to know which endpoints you can use to manage your queries.  
-You can paste the spec in [Swagger](https://editor.swagger.io/) to have a UI.
+! make sure the Redis server [is running](#executing-program) 
+### Add / Delete / Get links to monitor
+Check out the webserver [API spec](src/api/webserver_api_spec.yaml) to know which endpoints you can use to manage your queries.  
+You can paste the file in [Swagger editor](https://editor.swagger.io/) to have a UI.
 
 ### discord bot
-example of how to handle new listings with [Redis pubsub](https://redis-py.readthedocs.io/en/stable/advanced_features.html#publish-subscribe)
-in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact
+example of how to handle new listings with [Redis pub/sub](https://redis-py.readthedocs.io/en/stable/advanced_features.html#publish-subscribe) in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact.
 
 ```python
 import json
 import redis.asyncio as redis
 # this import might differ
-from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
+from src.marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
 
 from discord.ext import tasks, commands
 
@@ -87,51 +109,60 @@ REDIS_SUB_CHANNEL = 'listings'
 
 # in a Cog
 class MyCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.redis_client = redis.StrictRedis()
-        self.bot.loop.create_task(self.new_listing_reader())
+  def __init__(self, bot):
+    self.bot = bot
+    self.redis_client = redis.StrictRedis()
+    self.bot.loop.create_task(self.new_listing_reader())
 
+  async def cog_unload(self):
+    await self.redis_client.aclose()
 
-    async def cog_unload(self):
-        await self.redis_client.aclose()
-    
-    
-    async def new_listing_reader(self):
-        """
-        listens in Redis channel for messages and processes them
-        """
-        async with self.bot.redis_client.pubsub() as pubsub:
-            await pubsub.subscribe(REDIS_SUB_CHANNEL)
-            logging.info("started listening for new listings...")
-            async for msg in pubsub.listen():
-                if msg['type'] != 'message':
-                    continue
-    
-                data = msg['data'].decode('utf-8')
-                splitted_data = data.split(' ')
-                if splitted_data[0] == 'NEW':
-                    # NEW <request_url> {"listings": [<serialized TweedehandsListingInfo objects>]}
-                    query_url = splitted_data[1]
-                    listings_data = json.loads(" ".join(splitted_data[2:]))
-                    
-                    new_tweedehands_listings_infos = [TweedehandsListingInfo(**l) for l in listings_data['listings']]]
-    
-                    # do something with the new_tweedehands_listings_infos
-                    # ...
+  async def new_listing_reader(self):
+    """
+    listens in Redis channel for messages and processes them
+    """
+    async with self.bot.redis_client.pubsub() as pubsub:
+      await pubsub.subscribe(REDIS_SUB_CHANNEL)
+      logging.info("started listening for new listings...")
+      async for msg in pubsub.listen():
+        if msg['type'] != 'message':
+          continue
 
-# ... setup cog and load the extension
+        data = msg['data'].decode('utf-8')
+        splitted_data = data.split(' ')
+        if splitted_data[0] == 'NEW':
+          # NEW <request_url> {"listings": [<serialized TweedehandsListingInfo objects>]}
+          query_url = splitted_data[1]
+          listings_data = json.loads(" ".join(splitted_data[2:]))
+
+          new_tweedehands_listings_infos = [TweedehandsListingInfo(**l) for l in listings_data['listings']]]
+
+          # do something with the new_tweedehands_listings_infos
+          # ...
+
+        # ... setup cog and load the extension
 ```
 
 ## FYI
-Queries are a combination of the name of the listing you're using for + some filters (price / location)  
-
-Queries to be monitored are stored in a DB.  
-This is to cache already seen listings and update when new ones arrive.
+Marketplace links to be monitored for new listings are stored in a DB.  
+We also store minimal listings data in a DB.
+This is to cache already seen listings and update (the latest listing) when new ones arrive.
 
 New listings are sent with Redis to the `'listings'` channel.  
-a webserver is running (on `http://localhost:5000`) to handle the commands
+A webserver is running (on `http://localhost:5000`) to handle adding/removing/getting the marketplace links you're monitoring.
 
+---
+There are 3 services:
+- a **Redis server** (handles messaging, to send new listings to & read new listings from)
+- a **webserver** to add / delete / get links to monitor.
+- a **monitor / notifier** which sends new listings (info) to a Redis channel every interval. 
+
+We're using the Redis pub/sub implementation to handle received new listing(s) as soon as possible.  
+This is basically a while loop which handles every incoming message/payload.
+
+The monitor service will run and check for new listings every 5 minutes.
+Based on the request urls in the DB, it will check for new listings and process them through the process_listings method in
+INotifier.
 ## Help
 
 For any issues, please create an Issue

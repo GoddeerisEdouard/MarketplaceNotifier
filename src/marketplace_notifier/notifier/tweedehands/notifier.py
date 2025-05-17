@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import ValidationError
 
-from marketplace_notifier.notifier.models import ListingLocation
-from marketplace_notifier.notifier.notifier import INotifier
-from marketplace_notifier.notifier.tweedehands import api_models
-from marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
+from src.marketplace_notifier.notifier.models import ListingLocation
+from src.marketplace_notifier.notifier.notifier import INotifier
+from src.marketplace_notifier.notifier.tweedehands import api_models
+from src.marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
 
 
 class TweedehandsNotifier(INotifier):
