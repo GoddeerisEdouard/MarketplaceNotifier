@@ -26,6 +26,8 @@ class TestListingInfo(test.TestCase):
         self.assertTrue(r)
 
     async def test_valid_input_queries_should_be_serialized_without_errors(self):
+        # TODO: remove all this, we want the browser_url to be the only input
+        # there's no need to replicate 2dehands' frontend forms
         query = "iphone"
         city = "Gent"
         postal_code = 9000
@@ -70,8 +72,8 @@ class TestListingInfo(test.TestCase):
         tn = TweedehandsNotifier()
         # add query to monitor
         query = "iphone"
-        request_url = TweedehandsQuerySpecs(query=query).request_query_url
-        await QueryInfo.create(request_url=request_url, marketplace=tn.marketplace, query=query)
+        tqs = TweedehandsQuerySpecs(query=query)
+        await QueryInfo.create(browser_url=tqs.browser_query_url, request_url=tqs.request_query_url, marketplace=tn.marketplace, query=query)
 
         async with RetryClient() as rc:
             request_url_with_listings = await tn.fetch_all_query_urls(rc)

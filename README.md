@@ -1,4 +1,5 @@
 # MarketplaceNotifier
+**Version:** 1.1.1
 ## What is this?
 A service to get notified the second a great deal is listed.  
 
@@ -90,8 +91,7 @@ ways to communicate with the notifier
 
 ! make sure the Redis server [is running](#executing-program) 
 ### Add / Delete / Get links to monitor
-Check out the webserver [API spec](src/api/webserver_api_spec.yaml) to know which endpoints you can use to manage your queries.  
-You can paste the file in [Swagger editor](https://editor.swagger.io/) to have a UI.
+Once the webserver is running, you can browse to `http://localhost:5000/docs` to check out the endpoints & their responses.
 
 ### discord bot
 example of how to handle new listings with [Redis pub/sub](https://redis-py.readthedocs.io/en/stable/advanced_features.html#publish-subscribe) in [discordpy](https://discordpy.readthedocs.io/en/stable/) to be exact.

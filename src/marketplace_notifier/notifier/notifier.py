@@ -78,8 +78,7 @@ class INotifier(ABC):
         :return: None
         """
 
-        request_url = listing_specs.request_query_url
-        await QueryInfo.create(request_url=request_url, marketplace=self.marketplace, query=listing_specs.query)
+        await QueryInfo.create(browser_url=listing_specs.browser_query_url, request_url=listing_specs.request_query_url, marketplace=self.marketplace, query=listing_specs.query)
 
     async def _fetch_listings_of_request_url(self, retry_client: RetryClient, query_request_url: str) -> \
             List[

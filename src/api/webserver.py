@@ -2,13 +2,14 @@ import json
 import traceback
 import urllib.parse
 from pathlib import Path
+from typing import Optional
 from urllib.parse import urlencode, quote_plus, unquote_plus
 
 import tortoise
 from aiohttp_retry import RetryClient, ExponentialRetry
 from pydantic import BaseModel, Field
 from quart import Quart
-from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request
+from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request, Info, document_response
 from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
@@ -18,7 +19,8 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-QuartSchema(app)
+API_VERSION = "1.1.1" # always edit this in the README too
+QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
 with open(Path(__file__).parent / "l1_categories.json", "r") as f:
@@ -45,25 +47,52 @@ async def close_db():
 
 # Input model for validation
 class QueryData(BaseModel):
-    browser_url: str = Field(pattern=r'^https://www\.2dehands\.be/(q|l)/.*$')
+    browser_url: str = Field(pattern=r'^https:\/\/www\.2dehands\.be\/(?:q|l)\/[^?]*$')
+
+# response models (for OpenAPI documentation)
+class QueryInfoListResponse(BaseModel):
+    queries: Optional[QueryInfo_Pydantic_List] = Field(description="List of QueryInfos in the database")
 
 
 # INPUT: {"browser_url": "https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING"}
+# or
+# {"browser_url": "https://www.2dehands.be/l/games-en-spelcomputers/#q:ps5|Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING"}
 @app.post("/query/add_link")
 @validate_request(QueryData)
 async def create_query_by_link(data: QueryData):
-    # add query by browser url
+   # add query by browser url
     # this is preferred, as we don't have to locally check/validate if the location filter & price filter etc are correct
     # store it in the DB with a unique ID
-    # return a nice json object with all relevant info after parsing
     # ! We don't send any requests! All we're doing is parsing the browser URL to a request URL & storing it in the DB
     parsed_browser_url = urllib.parse.urlparse(data.browser_url)
     params = dict(param.split(':', 1) for param in
                   parsed_browser_url.fragment.split('|')) if parsed_browser_url.fragment != "" else {}
-    # example browser_url to better understand the parsing:
-    # https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING
-    # or
-    # https://www.2dehands.be/l/games-en-spelcomputers/#q:ps5|Language:all-languages|sortBy:SORT_INDEX|sortOrder:DECREASING
+
+    # we will alwqys add extra filters to the browser url if they're not present
+    # #Language:all-languages|offeredSince:Gisteren|sortBy:SORT_INDEX|sortOrder:DECREASING(|postcode:...|distanceMeters:...|priceMin:...|priceMax:...)
+    default_filters = {
+        "Language": "all-languages",
+        "offeredSince": "Gisteren",
+        "sortBy": "SORT_INDEX",
+        "sortOrder": "DECREASING"
+    }
+
+    # set filters if not present
+    for filterKey, filterValue in default_filters.items():
+        if params.get(filterKey) != filterValue:
+            params[filterKey] = filterValue
+
+    filtered_fragment = "|".join(f"{key}:{value}" for key, value in params.items())
+    # correct filters = at least Language:all-languages, offeredSince:Gisteren, sortBy:SORT_INDEX, sortOrder:DECREASING
+
+    if not parsed_browser_url.path.endswith("/"):
+        # this makes sure when creating the browser url again, we don't get a url which looks like
+        # https://www.2dehands.be/q/iphone+15+pro#sortBy:SORT_INDEX|...
+        # but instead, looks like https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX...
+        parsed_browser_url = parsed_browser_url._replace(path=parsed_browser_url.path + "/")
+
+    browser_url_with_correct_filters = parsed_browser_url._replace(fragment=filtered_fragment).geturl()
+
     path_parts = parsed_browser_url.path.strip('/').split('/')
 
     query_params = {
@@ -79,10 +108,16 @@ async def create_query_by_link(data: QueryData):
     if path_parts[0] == "l":
         # queried with a category as filter
         l1_category_name = path_parts[1]
-        query_params["l1CategoryId"] = l1_category_dict.get(l1_category_name)["id"]
+        l1_category_value = l1_category_dict.get(l1_category_name)
+        if l1_category_value is None:
+            raise ValueError(f"Invalid browser url: l1 category ({l1_category_name}) not found")
+        query_params["l1CategoryId"] = l1_category_value["id"]
         if len(path_parts) > 2:
             l2_category_name = path_parts[2]
-            query_params["l2CategoryId"]: l2_category_dict.get(l1_category_name).get(l2_category_name)[
+            l2_category_value = l2_category_dict.get(l1_category_name).get(l2_category_name)
+            if l2_category_value is None:
+                raise ValueError(f"Invalid browser url: l2 category ({l2_category_name}) not found")
+            query_params["l2CategoryId"]: l2_category_value[
                 "id"]  # only set if there's a subcategory
 
         if query := params.get("q"):
@@ -109,7 +144,7 @@ async def create_query_by_link(data: QueryData):
     # END of conversion from browser url to request url
 
     try:
-        qi = await QueryInfo.create(request_url=full_request_url, marketplace=Marketplace.TWEEDEHANDS,
+        qi = await QueryInfo.create(browser_url=browser_url_with_correct_filters, request_url=full_request_url, marketplace=Marketplace.TWEEDEHANDS,
                                     query=query_params["query"])
     except tortoise.exceptions.IntegrityError:
         return {
@@ -123,12 +158,14 @@ async def create_query_by_link(data: QueryData):
 
 
 @app.get("/query")
+@document_response(model_class=QueryInfoListResponse)
 async def get_all_queries():
     qi_py = await QueryInfo_Pydantic_List.from_queryset(QueryInfo.all())
     return {"queries": qi_py.model_dump()}
 
 
 @app.get("/query/<query_info_id>")
+@document_response(model_class=QueryInfo_Pydantic)
 async def get_query_by_id(query_info_id: int):
     try:
         qi = await QueryInfo.get(id=query_info_id)
@@ -137,9 +174,7 @@ async def get_query_by_id(query_info_id: int):
             "error": "Not Found",
         }, 404
     except ValueError:
-        return {
-            "error": "Invalid query_info_id",
-        }, 400
+        raise ValueError("Invalid query_info_id")
     except Exception as e:
         raise e
     qi_py = await QueryInfo_Pydantic.from_tortoise_orm(qi)
@@ -167,6 +202,11 @@ async def handle_request_validation_error(error):
         "error": str(error.validation_error),
     }, 400
 
+@app.errorhandler(ValueError)
+async def handle_value_error(error):
+    return {
+        "error": f"ValueError: {str(error)}",
+    }, 400
 
 # global error handler for unexpected exceptions
 @app.errorhandler(Exception)
