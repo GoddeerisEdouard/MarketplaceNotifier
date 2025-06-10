@@ -14,12 +14,12 @@ from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
-from src.shared.models import QueryInfo, Marketplace
+from src.shared.models import QueryInfo
 from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.1.1" # always edit this in the README too
+API_VERSION = "1.1.1"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -60,7 +60,7 @@ class QueryInfoListResponse(BaseModel):
 @app.post("/query/add_link")
 @validate_request(QueryData)
 async def create_query_by_link(data: QueryData):
-   # add query by browser url
+    # add query by browser url
     # this is preferred, as we don't have to locally check/validate if the location filter & price filter etc are correct
     # store it in the DB with a unique ID
     # ! We don't send any requests! All we're doing is parsing the browser URL to a request URL & storing it in the DB
@@ -144,8 +144,8 @@ async def create_query_by_link(data: QueryData):
     # END of conversion from browser url to request url
 
     try:
-        qi = await QueryInfo.create(browser_url=browser_url_with_correct_filters, request_url=full_request_url, marketplace=Marketplace.TWEEDEHANDS,
-                                    query=query_params["query"])
+        qi = await QueryInfo.create(browser_url=browser_url_with_correct_filters, request_url=full_request_url,
+                                    query=query_params.get("query"))
     except tortoise.exceptions.IntegrityError:
         return {
             "error": "Query already exists",
@@ -202,11 +202,13 @@ async def handle_request_validation_error(error):
         "error": str(error.validation_error),
     }, 400
 
+
 @app.errorhandler(ValueError)
 async def handle_value_error(error):
     return {
         "error": f"ValueError: {str(error)}",
     }, 400
+
 
 # global error handler for unexpected exceptions
 @app.errorhandler(Exception)

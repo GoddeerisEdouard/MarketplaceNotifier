@@ -1,11 +1,11 @@
 import logging
 from http import HTTPStatus
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from aiohttp_retry import RetryClient
 
 async def get_request_response(retry_client: RetryClient, URI: str,
-                               headers: Optional[Dict] = None) -> str:
+                               headers: Optional[Dict] = None) -> Any:
     """
     uses client_session with given headers and a user-agent
     logs errors
@@ -23,9 +23,9 @@ async def get_request_response(retry_client: RetryClient, URI: str,
     raise ClientConnectorError(req.connection_key, exc) from exc
 aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2dehands.be:443 ssl:False [Temporary failure in name resolution]
     """
-    async with retry_client.get(URI, headers=headers, ssl=False) as response:
+    async with retry_client.get(URI, headers=headers) as response:
         if response.status == HTTPStatus.OK:
-            return await response.text()
+            return await response.json()
         elif response.status == HTTPStatus.NO_CONTENT:
             logging.warning(f"Requested URI: {URI} returns no content...")
             return ""

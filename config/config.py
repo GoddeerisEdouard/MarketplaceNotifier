@@ -2,6 +2,7 @@ import configparser
 import os
 from pathlib import Path
 
+
 def load_config():
     config = configparser.ConfigParser()
     config_dir = Path(__file__).parent

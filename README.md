@@ -1,5 +1,5 @@
 # MarketplaceNotifier
-**Version:** 1.1.1
+**Version:** 1.2.0
 ## What is this?
 A service to get notified the second a great deal is listed.  
 
@@ -8,7 +8,7 @@ supported *marketplace* (so far):
 
 ## How does this work?
 You simply copy the marketplace link of your web browser and send it in a POST request to the webserver.  
-Afterwards, the Redis server will send - if there is any - new listings data (every 5 minutes).  
+Afterwards, the Redis server will send - if there is any - new listings data (every 2 minutes).  
 
 Simple example:  
 > get notified whenever a new iPhone 15 Pro gets listed
@@ -21,11 +21,13 @@ Simple example:
 Now you're automatically monitoring new listings for that browser_url.  
 
 Next step is to handle the incoming new listings data (with Redis).  
-New listings data is being sent in the `listings` channel in this format:   
-`NEW <request_url> {"listings": [<serialized TweedehandsListingInfo objects>]}`  
+New listings data is being sent in the `listings` channel in this format:     
+`<request_url> [<Listing objects>]}`  
+check [api_models.py](src/misc/api_models.py) for the Listing object structure.
+
 You can split by the first 2 spaces to get a list with:
 ```python
-['NEW', 'https://www.2dehands.be/q/iphone+15+pro/', '{"listings": [<serialized TweedehandsListingInfo objects>]']
+['https://www.2dehands.be/q/iphone+15+pro/', '[<Listing objects>]']
 ```
 
 Here's an [example](#discord-bot) of handling these messages in discord.py.
@@ -99,8 +101,6 @@ example of how to handle new listings with [Redis pub/sub](https://redis-py.read
 ```python
 import json
 import redis.asyncio as redis
-# this import might differ
-from src.marketplace_notifier.notifier.tweedehands.return_models import TweedehandsListingInfo
 
 from discord.ext import tasks, commands
 
@@ -130,17 +130,13 @@ class MyCog(commands.Cog):
 
         data = msg['data'].decode('utf-8')
         splitted_data = data.split(' ')
-        if splitted_data[0] == 'NEW':
-          # NEW <request_url> {"listings": [<serialized TweedehandsListingInfo objects>]}
-          query_url = splitted_data[1]
-          listings_data = json.loads(" ".join(splitted_data[2:]))
+        # <request_url> {"listings": [<Listing objects>]}
+        query_url = splitted_data[0]
+        new_listings = json.loads(" ".join(splitted_data[1:]))
+        # do something with the new listings
+        # ...
 
-          new_tweedehands_listings_infos = [TweedehandsListingInfo(**l) for l in listings_data['listings']]]
-
-          # do something with the new_tweedehands_listings_infos
-          # ...
-
-        # ... setup cog and load the extension
+    # ... setup cog and load the extension
 ```
 
 ## FYI
@@ -151,6 +147,14 @@ This is to cache already seen listings and update (the latest listing) when new 
 New listings are sent with Redis to the `'listings'` channel.  
 A webserver is running (on `http://localhost:5000`) to handle adding/removing/getting the marketplace links you're monitoring.
 
+Errors during fetching are sent tot the `error_channel` channel.  
+So you should definitely also subscribe to that channel.  
+These have a format of:
+```json
+{"error":  "...", "reason":  "...", "traceback":  "..."}
+```
+! the traceback is optional!
+
 ---
 There are 3 services:
 - a **Redis server** (handles messaging, to send new listings to & read new listings from)
@@ -160,7 +164,7 @@ There are 3 services:
 We're using the Redis pub/sub implementation to handle received new listing(s) as soon as possible.  
 This is basically a while loop which handles every incoming message/payload.
 
-The monitor service will run and check for new listings every 5 minutes.
+The monitor service will run and check for new listings every 2 minutes.
 Based on the request urls in the DB, it will check for new listings and process them through the process_listings method in
 INotifier.
 ## Help
