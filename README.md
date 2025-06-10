@@ -129,9 +129,9 @@ class MyCog(commands.Cog):
           continue
 
         data = msg['data'].decode('utf-8')
+        # '<request_url> [<Listing objects>]'}
         splitted_data = data.split(' ')
-        # <request_url> {"listings": [<Listing objects>]}
-        query_url = splitted_data[0]
+        request_url = splitted_data[0]
         new_listings = json.loads(" ".join(splitted_data[1:]))
         # do something with the new listings
         # ...
