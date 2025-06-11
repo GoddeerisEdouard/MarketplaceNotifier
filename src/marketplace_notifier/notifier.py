@@ -69,10 +69,12 @@ class TweedehandsNotifier:
 
             latest_listing_id = int(latest_listing_for_request_url.item_id[1:]) if latest_listing_for_request_url else 0 # remove 'm' prefix
 
+
+
             for listing in listings_of_query_url:
                 listing_id = int(listing["itemId"][1:]) # remove 'm' prefix
                 if listing_id <= latest_listing_id:
-                    logging.info("No newer listings anymore, breaking out of loop...")
+                    logging.info("no newer listings found for this request URL.")
                     break
 
                 exists = await ListingInfoDB.exists(request_url=request_url, item_id=listing["itemId"])
@@ -92,4 +94,5 @@ class TweedehandsNotifier:
 
             logging.info(f'found {len(new_listings)} new listings for {request_url}, publishing to redis...')
             msg = f"{request_url} {new_listings}"
+            # this will throw a redis.exceptions.ConnectionError if redis is not running
             await async_redis_client.publish('listings', msg)
