@@ -22,12 +22,13 @@ Now you're automatically monitoring new listings for that browser_url.
 
 Next step is to handle the incoming new listings data (with Redis).  
 New listings data is being sent in the `listings` channel in this format:     
-`<request_url> [<Listing objects>]}`  
+`'{"request_url": <request_url>, "new_listings": [<Listing objects>]}'`  
 check [api_models.py](src/misc/api_models.py) for the Listing object structure.
 
-You can split by the first 2 spaces to get a list with:
+Load the data as josn to access the request_url and new_listings:
 ```python
-['https://www.2dehands.be/q/iphone+15+pro/', '[<Listing objects>]']
+json.loads(data["data"])
+{"request_url": "https://www.2dehands.be/q/iphone+15+pro/", "new_listings": [<Listing objects>]}
 ```
 
 Here's an [example](#discord-bot) of handling these messages in discord.py.
@@ -130,9 +131,9 @@ class MyCog(commands.Cog):
 
         data = msg['data'].decode('utf-8')
         # '<request_url> [<Listing objects>]'}
-        splitted_data = data.split(' ')
-        request_url = splitted_data[0]
-        new_listings = json.loads(" ".join(splitted_data[1:]))
+        splitted_data = json.loads(data)
+        request_url = data["request_url"]
+        new_listings = data["new_listings"]
         # do something with the new listings
         # ...
 

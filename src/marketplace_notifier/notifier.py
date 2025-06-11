@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import re
 from typing import List, Optional, Dict, Any
@@ -93,6 +94,6 @@ class TweedehandsNotifier:
                 continue
 
             logging.info(f'found {len(new_listings)} new listings for {request_url}, publishing to redis...')
-            msg = f"{request_url} {new_listings}"
+            msg = {"request_url": request_url, "new_listings": new_listings}
             # this will throw a redis.exceptions.ConnectionError if redis is not running
-            await async_redis_client.publish('listings', msg)
+            await async_redis_client.publish('listings', json.dumps(msg))
