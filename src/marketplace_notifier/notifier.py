@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import re
 from typing import List, Optional, Dict, Any
 
 import redis.asyncio as redis
@@ -9,7 +8,7 @@ from aiohttp_retry import RetryClient
 
 from utils.api_utils import get_request_response
 from src.shared.models import QueryInfo
-from src.marketplace_notifier.db_models import ListingInfoDB
+from src.marketplace_notifier.db_models import LatestListingInfoDB
 
 
 class TweedehandsNotifier:
@@ -51,7 +50,7 @@ class TweedehandsNotifier:
         stores some attributes of listing in DB
         publishes new listings to redis pubsub channel
         """
-        for request_url, listings_of_query_url in request_url_all_listings_dict.items():
+        for request_url, listings_of_request_url in request_url_all_listings_dict.items():
             logging.info(f'processing {request_url}...')
             # it might take a while for every query_url to be processed
             qi_exists = await QueryInfo.exists(request_url=request_url)
@@ -59,41 +58,48 @@ class TweedehandsNotifier:
                 logging.warning(f"request url {request_url} was removed from the DB while processing...")
                 continue
 
-            # sort listings from OLD to NEW
-            # we do this by checking the ID (format m<numbers> )
-            # example: m123 is newer than m100 (because 123 comes after 100)
-            # so the smallest number will be first in list (as it's the oldest)
-            listings_of_query_url.sort(key=lambda li: int(re.search(r"\d+", li["itemId"]).group(0)))
-            new_listings = []
+            latest_listing_for_request_url = await LatestListingInfoDB.filter(
+                request_url=request_url).get_or_none()  # should only be one
+            # 0 if there is no latest listing for this request_url
+            latest_listing_id = int(latest_listing_for_request_url.item_id[
+                                    1:]) if latest_listing_for_request_url else 0  # remove 'm' prefix
 
-            latest_listing_for_request_url = await ListingInfoDB.filter(request_url=request_url).order_by('-item_id').first()
-
-            latest_listing_id = int(latest_listing_for_request_url.item_id[1:]) if latest_listing_for_request_url else 0 # remove 'm' prefix
-
-
-
-            for listing in listings_of_query_url:
-                listing_id = int(listing["itemId"][1:]) # remove 'm' prefix
-                if listing_id <= latest_listing_id:
-                    logging.info("no newer listings found for this request URL.")
-                    break
-
-                exists = await ListingInfoDB.exists(request_url=request_url, item_id=listing["itemId"])
-                if exists:
-                    logging.info(f'listing already seen for this request url: <title:{listing["title"]}, id:{listing["itemId"]}>')
-                    continue
-
-                logging.info(f'new listing found for request url: <request_url:{request_url}, title:{listing["title"]}, id:{listing["itemId"]}>')
-                new_listings.append(listing)
-                listing_info_db_obj = ListingInfoDB(item_id=listing["itemId"], title=listing["title"], request_url=request_url)
-                # update latest listing ID in DB
-                await listing_info_db_obj.save()
-
-            if not new_listings:
-                logging.info(f'no new listings for {request_url}')
+            # filter out ad listings & older (than latest DB listing) listings
+            new_non_ad_listings_of_request_url = [listing for listing in listings_of_request_url if
+                                                  listing.get("priorityProduct") == "NONE" and int(
+                                                      listing.get("itemId")[1:]) > latest_listing_id]
+            if not new_non_ad_listings_of_request_url:
+                logging.info(f'no new NON-AD listings for request_url: {request_url}')
                 continue
 
-            logging.info(f'found {len(new_listings)} new listings for {request_url}, publishing to redis...')
-            msg = {"request_url": request_url, "new_listings": new_listings}
+            total_non_ad_new_listings = len(new_non_ad_listings_of_request_url)
+
+            # sort listings from NEW to OLD (biggest number first)
+            # we do this by checking the ID (format m<numbers> )
+            # example: m123 is newer than m100 (because 123 comes after 100)
+            new_non_ad_listings_of_request_url.sort(key=lambda li: int(li["itemId"][1:]), reverse=True)  # remove 'm' prefix
+
+            logging.info(
+                f'found {total_non_ad_new_listings} NEW NON-AD /{len(listings_of_request_url)} TOTAL listings for {request_url}')
+
+            for i, listing in enumerate(new_non_ad_listings_of_request_url):
+                logging.info(f'{i + 1}. listing for request url: <title:{listing["title"]}, id:{listing["itemId"]}>')
+                if i == 0:
+                    # save item_id of latest listing to DB
+                    if latest_listing_for_request_url is None:
+                        lidb_obj = LatestListingInfoDB(request_url=request_url,item_id=listing["itemId"], title=listing["title"])
+                        await lidb_obj.save()
+                        logging.info(f"set latest item_id to <{listing['itemId']}, title: {listing['title']}>")
+                    else:
+                        latest_listing_for_request_url.item_id = listing["itemId"]
+                        latest_listing_for_request_url.title = listing["title"]
+                        await latest_listing_for_request_url.save()
+
+                        logging.info(f"updated latest item_id to <{listing['itemId']}, title: {listing['title']}>")
+
+            logging.info(
+                f'found {total_non_ad_new_listings} new NON-AD listings for {request_url}, publishing to redis...')
+            msg = {"request_url": request_url, "new_listings": new_non_ad_listings_of_request_url}
             # this will throw a redis.exceptions.ConnectionError if redis is not running
+
             await async_redis_client.publish('listings', json.dumps(msg))

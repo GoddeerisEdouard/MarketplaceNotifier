@@ -1,5 +1,5 @@
 # MarketplaceNotifier
-**Version:** 1.2.0
+**Version:** 1.2.1
 ## What is this?
 A service to get notified the second a great deal is listed.  
 
@@ -8,7 +8,8 @@ supported *marketplace* (so far):
 
 ## How does this work?
 You simply copy the marketplace link of your web browser and send it in a POST request to the webserver.  
-Afterwards, the Redis server will send - if there is any - new listings data (every 2 minutes).  
+Afterwards, the Redis server will send - if there is any - new non-ad listings data (every 2 minutes).    
+This is done by "long polling".
 
 Simple example:  
 > get notified whenever a new iPhone 15 Pro gets listed
@@ -25,7 +26,7 @@ New listings data is being sent in the `listings` channel in this format:
 `'{"request_url": <request_url>, "new_listings": [<Listing objects>]}'`  
 check [api_models.py](src/misc/api_models.py) for the Listing object structure.
 
-Load the data as josn to access the request_url and new_listings:
+Load the data as JSON:
 ```python
 json.loads(data["data"])
 {"request_url": "https://www.2dehands.be/q/iphone+15+pro/", "new_listings": [<Listing objects>]}
@@ -92,7 +93,7 @@ This starts 3 services:
 ## Implementation
 ways to communicate with the notifier  
 
-! make sure the Redis server [is running](#executing-program) 
+! make sure a Redis server is running on port 6379. 
 ### Add / Delete / Get links to monitor
 Once the webserver is running, you can browse to `http://localhost:5000/docs` to check out the endpoints & their responses.
 
@@ -130,7 +131,7 @@ class MyCog(commands.Cog):
           continue
 
         data = msg['data'].decode('utf-8')
-        # '<request_url> [<Listing objects>]'}
+        # '{"request_url": <request_url>, "new_listings": [<Listing objects>]}'
         splitted_data = json.loads(data)
         request_url = data["request_url"]
         new_listings = data["new_listings"]
@@ -152,15 +153,15 @@ Errors during fetching are sent tot the `error_channel` channel.
 So you should definitely also subscribe to that channel.  
 These have a format of:
 ```json
-{"error":  "...", "reason":  "...", "traceback":  "..."}
+'{"error":  "...", "reason":  "...", "traceback":  "..."}'
 ```
-! the traceback is optional!
+! the traceback key is optional!
 
 ---
 There are 3 services:
 - a **Redis server** (handles messaging, to send new listings to & read new listings from)
 - a **webserver** to add / delete / get links to monitor.
-- a **monitor / notifier** which sends new listings (info) to a Redis channel every interval. 
+- a **monitor / notifier** which sends new non-ad listings to a Redis channel every interval. 
 
 We're using the Redis pub/sub implementation to handle received new listing(s) as soon as possible.  
 This is basically a while loop which handles every incoming message/payload.
