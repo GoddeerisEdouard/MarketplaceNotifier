@@ -20,6 +20,19 @@ Simple example:
 > ```
 
 Now you're automatically monitoring new listings for that browser_url.  
+The response will be 
+```json
+{
+  "browser_url": "https://www.2dehands.be/q/iphone+15+pro/#Language:all-languages|offeredSince:Gisteren|sortBy:SORT_INDEX|sortOrder:DECREASING",
+  "id": 1,
+  "is_healthy": true,
+  "next_check_time": null,
+  "query": "iphone 15 pro",
+  "request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=30&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro"
+}
+```
+\- yes, your browser_url automatically gets additional filters.
+
 
 Next step is to handle the incoming new listings data (with Redis).  
 New listings data is being sent in the `listings` channel in this format:     
@@ -27,9 +40,10 @@ New listings data is being sent in the `listings` channel in this format:
 check [api_models.py](src/misc/api_models.py) for the Listing object structure.
 
 Load the data as JSON:
-```python
-json.loads(data["data"])
-{"request_url": "https://www.2dehands.be/q/iphone+15+pro/", "new_listings": [<Listing objects>]}
+`json.loads(data["data"])`
+```json
+{"request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=30&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro", 
+ "new_listings": [<Listing objects>]}
 ```
 
 Here's an [example](#discord-bot) of handling these messages in discord.py.
@@ -136,6 +150,7 @@ class MyCog(commands.Cog):
         request_url = data["request_url"]
         new_listings = data["new_listings"]
         # do something with the new listings
+        # be aware, new_listings are sorted from newest to oldest
         # ...
 
     # ... setup cog and load the extension
