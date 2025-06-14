@@ -6,6 +6,8 @@ import redis.asyncio as redisaio
 from tortoise import run_async, Tortoise
 
 from config.config import config
+from src.shared.models import QueryInfo
+from src.marketplace_notifier.db_models import LatestListingInfoDB
 from src.marketplace_notifier.scheduler import QueryScheduler
 from src.marketplace_notifier.notifier import TweedehandsNotifier
 
@@ -32,6 +34,21 @@ if logger.hasHandlers():
 for handler in [file_handler, console_handler]:
     logger.addHandler(handler)
 
+
+async def sync_request_urls_between_shared_db_and_marketplace_db():
+    # this is useful when the pubsub is down while the webserver is still online
+    request_urls_shared_db = await QueryInfo.all().values_list('request_url', flat=True)
+    logging.info("Syncing request URLs between webserver and marketplace DB...")
+    request_urls_marketplace_db = await LatestListingInfoDB.all().values_list('request_url', flat=True)
+
+    # the shared DB request_urls are the source of truth
+    request_urls_to_remove = set(request_urls_shared_db) - set(request_urls_marketplace_db)
+    logging.info(f"There are {len(request_urls_to_remove)} too much request_urls being fetched")
+    for request_url in request_urls_to_remove:
+        await QueryInfo.filter(request_url=request_url).delete()
+    logging.info("Syncing complete!")
+
+
 async def run():
     """
     runs the Redis pubsub
@@ -56,8 +73,20 @@ async def run():
     await Tortoise.init(config=CONFIG)
     await Tortoise.generate_schemas()
 
+    await sync_request_urls_between_shared_db_and_marketplace_db()
+
     # initialize redis pubsub IPC
     redis_client = redisaio.StrictRedis(host=config["redis_host"])
+    try:
+        await redis_client.ping()
+    except redisaio.ConnectionError as e:
+        logging.error("Seems like there's not redis server running, please start it first.")
+        raise e
+    except Exception as e:
+        logging.error(f"Unexpected error while connecting to Redis: {e}")
+        raise e
+    logging.info("Connected to Redis successfully.")
+
     tn = TweedehandsNotifier()
     retry_options = ExponentialRetry()  # default retry of 3, retry on all server errors (5xx)
     async with RetryClient(retry_options=retry_options, raise_for_status=False) as cs:
