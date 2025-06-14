@@ -4,7 +4,7 @@ import logging
 import traceback
 from datetime import timedelta, datetime
 
-from src.marketplace_notifier.utils.api_utils import get_request_response
+from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo
 
 

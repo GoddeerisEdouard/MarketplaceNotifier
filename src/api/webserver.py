@@ -14,12 +14,13 @@ from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
+from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo
 from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.0"  # always edit this in the README too
+API_VERSION = "1.2.2"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -48,6 +49,7 @@ async def close_db():
 # Input model for validation
 class QueryData(BaseModel):
     browser_url: str = Field(pattern=r'^https:\/\/www\.2dehands\.be\/(?:q|l)\/[^?]*$')
+
 
 # response models (for OpenAPI documentation)
 class QueryInfoListResponse(BaseModel):
@@ -179,6 +181,17 @@ async def get_query_by_id(query_info_id: int):
         raise e
     qi_py = await QueryInfo_Pydantic.from_tortoise_orm(qi)
     return qi_py.model_dump()
+
+@app.get("/seller/<seller_id>")
+async def get_seller_info(seller_id: int):
+    # TODO: create reponse model
+    # returns seller info like rating, number of reviews
+
+    # response example:
+    # {"bankAccount": true, "phoneNumber": true, "identification": true, "paymentMethod": {"name": "bancontact"},
+    #  "numberOfReviews": 12, "averageScore": 5, "smbVerified": false, "profilePictures": {}, "salesRepresentatives": []}
+    url = f"https://www.2dehands.be/v/api/seller-profile/{seller_id}"
+    return await get_request_response(retry_client=app.rc, URI=url)
 
 
 @app.delete("/query/<query_info_id>")

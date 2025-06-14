@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any
 import redis.asyncio as redis
 from aiohttp_retry import RetryClient
 
-from utils.api_utils import get_request_response
+from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo
 from src.marketplace_notifier.db_models import LatestListingInfoDB
 

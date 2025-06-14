@@ -6,7 +6,7 @@ from aiohttp_retry import RetryClient
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field, HttpUrl, AliasChoices
 
-from src.marketplace_notifier.utils.api_utils import get_request_response
+from src.shared.api_utils import get_request_response
 
 
 # Tweedehands API related
