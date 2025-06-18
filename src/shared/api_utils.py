@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from aiohttp_retry import RetryClient
 
 async def get_request_response(retry_client: RetryClient, URI: str,
-                               headers: Optional[Dict] = None) -> Any:
+                               headers: Optional[Dict] = None, json_response: bool = True) -> Any:
     """
     uses client_session with given headers and a user-agent
     logs errors
@@ -25,6 +25,8 @@ aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2deha
     """
     async with retry_client.get(URI, headers=headers) as response:
         if response.status == HTTPStatus.OK:
+            if not json_response:
+                return await response.text()
             return await response.json()
         elif response.status == HTTPStatus.NO_CONTENT:
             logging.warning(f"Requested URI: {URI} returns no content...")
