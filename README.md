@@ -8,10 +8,10 @@ supported *marketplace* (so far):
 
 ## How does this work?
 You simply copy the marketplace link of your web browser and send it in a POST request to the webserver.  
-Afterwards, the Redis server will send - if there is any - new non-ad listings data (every 2 minutes).    
-This is done by "long polling".
+Afterwards, the Redis server will send - if there is any - new non-ad listings data (every 2 minutes).  
+This is done by "long polling".  
 
-Simple example:  
+example REQUEST:  
 > get notified whenever a new iPhone 15 Pro gets listed
 > ```sh
 > curl -X POST http://localhost:5000/query/add_link \
@@ -20,7 +20,7 @@ Simple example:
 > ```
 
 Now you're automatically monitoring new listings for that browser_url.  
-The response will be 
+RESPONSE:
 ```json
 {
   "browser_url": "https://www.2dehands.be/q/iphone+15+pro/#Language:all-languages|offeredSince:Gisteren|sortBy:SORT_INDEX|sortOrder:DECREASING",
@@ -37,7 +37,7 @@ The response will be
 Next step is to handle the incoming new listings data (with Redis).  
 New listings data is being sent in the `listings` channel in this format:     
 `'{"request_url": <request_url>, "new_listings": [<Listing objects>]}'`  
-check [api_models.py](src/misc/api_models.py) for the Listing object structure.
+check [api_models.py](src/misc/api_models.py) for the `<Listing>` object structure.
 
 Load the data as JSON:
 `json.loads(data["data"])`
@@ -72,24 +72,20 @@ Here's an [example](#discord-bot) of handling these messages in discord.py.
 A **redis server** should be running on port 6379  
 Test if the server is running by pinging with `redis-cli`.
 
-webserver to [handle CRUD operations](#implementation) on listing queries  
-If on windows, you have to add to PYTHONPATH first to fix some relative imports  
-`set PYTHONPATH=%PYTHONPATH%;C:\Users\Admin\Documents\Some Other Folder\MarketplaceNotifier`
+running WEBSERVER to [handle CRUD operations](#implementation):  
 ```sh
 python3 -m venv webserver-venv
-source webserver-venv/bin/activate
-# or on Windows: webserver-venv\Scripts\activate 
+source webserver-venv/bin/activate # Linux
+# webserver-venv\Scripts\activate  # Windows
 pip3 install -r src/api/requirements.txt
 python src/api/webserver.py
 ```
 
-fetch new listings & sends them with Redis
-
-`set PYTHONPATH=%PYTHONPATH%;C:\Users\Admin\Documents\Some Other Folder\MarketplaceNotifier`
+NOTIFIER service (which checks for new listings & sends them to a channel in the Redis server):  
 ```sh
 python3 -m venv notifier-venv
-source notifier-venv/bin/activate
-# or on Windows: notifier-venv\Scripts\activate 
+source notifier-venv/bin/activate # Linux
+# notifier-venv\Scripts\activate # Windows 
 pip3 install -r src/marketplace_notifier/requirements.txt
 python src/marketplace_notifier/main.py
 ```
@@ -157,12 +153,11 @@ class MyCog(commands.Cog):
 ```
 
 ## FYI
-Marketplace links to be monitored for new listings are stored in a DB.  
-We also store minimal listings data in a DB.
-This is to cache already seen listings and update (the latest listing) when new ones arrive.
+2dehands browser_urls to be monitored for new listings are stored in a DB.  
+We also store the latest item_id of a browser_url in the DB.  
 
 New listings are sent with Redis to the `'listings'` channel.  
-A webserver is running (on `http://localhost:5000`) to handle adding/removing/getting the marketplace links you're monitoring.
+A webserver is running (on `http://localhost:5000`) to handle adding/removing/getting the 2dehands browser_urls you're monitoring.
 
 Errors during fetching are sent tot the `error_channel` channel.  
 So you should definitely also subscribe to that channel.  
@@ -182,8 +177,6 @@ We're using the Redis pub/sub implementation to handle received new listing(s) a
 This is basically a while loop which handles every incoming message/payload.
 
 The monitor service will run and check for new listings every 2 minutes.
-Based on the request urls in the DB, it will check for new listings and process them through the process_listings method in
-INotifier.
 ## Help
 
 For any issues, please create an Issue
