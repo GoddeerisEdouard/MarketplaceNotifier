@@ -21,7 +21,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.3"  # always edit this in the README too
+API_VERSION = "1.2.4"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -120,8 +120,7 @@ async def create_query_by_link(data: QueryData):
             l2_category_value = l2_category_dict.get(l1_category_name).get(l2_category_name)
             if l2_category_value is None:
                 raise ValueError(f"Invalid browser url: l2 category ({l2_category_name}) not found")
-            query_params["l2CategoryId"]: l2_category_value[
-                "id"]  # only set if there's a subcategory
+            query_params["l2CategoryId"] = l2_category_value["id"]  # only set if there's a subcategory
 
         if query := params.get("q"):
             query_params["query"] = unquote_plus(query)
