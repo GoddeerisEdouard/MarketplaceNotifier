@@ -14,7 +14,7 @@ async def test_add_link():
     assert resp.json() == {
         "marketplace": "TWEEDEHANDS",
         "query": "iphone 15",
-        "request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=30&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15"
+        "request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=100&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15"
     }
 
 

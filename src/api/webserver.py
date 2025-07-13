@@ -102,7 +102,6 @@ async def create_query_by_link(data: QueryData):
         "attributesByKey[]": ["Language:all-languages", "offeredSince:Gisteren"],
         "limit": 100,  # sometimes, even when we post a listing, it instantly gets on the second or even third page
         # even when the listings are sorted by date...: this makes sure we fetch all listings from the first 3 (and a half) pages
-        # so we might have to increase the limit in the future
         "offset": 0,
         "sortBy": "SORT_INDEX",
         "sortOrder": "DECREASING",

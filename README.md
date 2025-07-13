@@ -28,7 +28,7 @@ RESPONSE:
   "is_healthy": true,
   "next_check_time": null,
   "query": "iphone 15 pro",
-  "request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=30&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro"
+  "request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=100&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro"
 }
 ```
 \- yes, your browser_url automatically gets additional filters.
@@ -42,7 +42,7 @@ check [api_models.py](src/misc/api_models.py) for the `<Listing>` object structu
 Load the data as JSON:
 `json.loads(data["data"])`
 ```json
-{"request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=30&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro", 
+{"request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=100&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro", 
  "new_listings": [<Listing objects>]}
 ```
 
