@@ -21,7 +21,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.4"  # always edit this in the README too
+API_VERSION = "1.2.5"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -100,7 +100,7 @@ async def create_query_by_link(data: QueryData):
 
     query_params = {
         "attributesByKey[]": ["Language:all-languages", "offeredSince:Gisteren"],
-        "limit": 30,  # sometimes, even when we post a listing, it instantly gets on the second or even third page
+        "limit": 100,  # sometimes, even when we post a listing, it instantly gets on the second or even third page
         # even when the listings are sorted by date...: this makes sure we fetch all listings from the first 3 (and a half) pages
         # so we might have to increase the limit in the future
         "offset": 0,
