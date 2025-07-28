@@ -10,7 +10,8 @@ import tortoise
 from aiohttp_retry import RetryClient, ExponentialRetry
 from pydantic import BaseModel, Field
 from quart import Quart
-from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request, Info, document_response
+from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request, Info, document_response, \
+    validate_querystring
 from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
@@ -21,7 +22,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.6"  # always edit this in the README too
+API_VERSION = "1.2.7"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -46,6 +47,8 @@ async def close_db():
     await Tortoise.close_connections()
     await app.rc.close()
 
+class QueryArgs(BaseModel):
+    request_url: Optional[str] = None
 
 # Input model for validation
 class QueryData(BaseModel):
@@ -171,9 +174,13 @@ async def set_query_status(data: UpdateQueryStatus):
     return {}, 204
 
 @app.get("/query")
+@validate_querystring(QueryArgs)
 @document_response(model_class=QueryInfoListResponse)
-async def get_all_queries():
-    qi_py = await QueryInfo_Pydantic_List.from_queryset(QueryInfo.all())
+async def get_all_queries(query_args: QueryArgs):
+    if request_url := query_args.request_url:
+        qi_py = await QueryInfo_Pydantic_List.from_queryset(QueryInfo.filter(request_url=request_url).all())
+    else:
+        qi_py = await QueryInfo_Pydantic_List.from_queryset(QueryInfo.all())
     return {"queries": qi_py.model_dump()}
 
 
