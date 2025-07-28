@@ -16,12 +16,12 @@ from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
 from src.shared.api_utils import get_request_response
-from src.shared.models import QueryInfo
+from src.shared.models import QueryInfo, QueryStatus
 from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.5"  # always edit this in the README too
+API_VERSION = "1.2.6"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -56,6 +56,10 @@ class QueryData(BaseModel):
 class QueryInfoListResponse(BaseModel):
     queries: Optional[QueryInfo_Pydantic_List] = Field(description="List of QueryInfos in the database")
 
+# input model for updating QueryInfo status
+class UpdateQueryStatus(BaseModel):
+    status: QueryStatus = Field(..., description="Set the status of the query")
+    id: int = Field(..., description="ID of the QueryInfo to update status for")
 
 # INPUT: {"browser_url": "https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX|sortOrder:DECREASING"}
 # or
@@ -157,6 +161,14 @@ async def create_query_by_link(data: QueryData):
     qi_py = await QueryInfo_Pydantic.from_tortoise_orm(qi)
     return qi_py.model_dump(), 200
 
+@app.post("/query/status")
+@validate_request(UpdateQueryStatus)
+async def set_query_status(data: UpdateQueryStatus):
+    # even if the filter doesn't match anything, no error will be thrown
+    updated_count = await QueryInfo.filter(id=data.id).update(status=data.status)
+    if updated_count == 0:
+        return {"error": "QueryInfo not found"}, 404
+    return {}, 204
 
 @app.get("/query")
 @document_response(model_class=QueryInfoListResponse)

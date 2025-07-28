@@ -1,5 +1,5 @@
 # MarketplaceNotifier
-**Version:** 1.2.5
+**Version:** 1.2.6
 ## What is this?
 A service to get notified the second a great deal is listed.  
 
@@ -25,7 +25,7 @@ RESPONSE:
 {
   "browser_url": "https://www.2dehands.be/q/iphone+15+pro/#Language:all-languages|offeredSince:Gisteren|sortBy:SORT_INDEX|sortOrder:DECREASING",
   "id": 1,
-  "is_healthy": true,
+  "status": "ACTIVE",
   "next_check_time": null,
   "query": "iphone 15 pro",
   "request_url": "https://www.2dehands.be/lrp/api/search?attributesByKey%5B%5D=Language%3Aall-languages&attributesByKey%5B%5D=offeredSince%3AGisteren&limit=100&offset=0&sortBy=SORT_INDEX&sortOrder=DECREASING&viewOptions=list-view&query=iphone+15+pro"

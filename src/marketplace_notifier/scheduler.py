@@ -5,7 +5,7 @@ import traceback
 from datetime import timedelta, datetime
 
 from src.shared.api_utils import get_request_response
-from src.shared.models import QueryInfo
+from src.shared.models import QueryInfo, QueryStatus
 
 
 class QueryScheduler:
@@ -37,13 +37,13 @@ class QueryScheduler:
         await self._initialize_query_schedule()
 
         while self.running:
-            healthy_request_urls = await QueryInfo.filter(is_healthy=True).values_list("request_url", flat=True)
-            if not healthy_request_urls:
-                logging.info("No (healthy) queries found, sleeping...")
+            active_request_urls = await QueryInfo.filter(status=QueryStatus.ACTIVE).values_list("request_url", flat=True)
+            if not active_request_urls:
+                logging.info("No (active) queries found, sleeping...")
                 await asyncio.sleep(10)
                 continue
 
-            removed_urls = set(self.tasks.keys()) - set(healthy_request_urls)
+            removed_urls = set(self.tasks.keys()) - set(active_request_urls)
 
             # remove tasks for URLs that no longer exist
             for url in removed_urls:
@@ -51,7 +51,7 @@ class QueryScheduler:
                 self.tasks.pop(url, None)
 
             # add new queries that aren't being tracked yet
-            new_urls = set(healthy_request_urls) - set(self.tasks.keys())
+            new_urls = set(active_request_urls) - set(self.tasks.keys())
             for new_url in new_urls:
                 await self._schedule_new_query(new_url)
 
@@ -69,16 +69,16 @@ class QueryScheduler:
         Initialize the schedule by spreading queries evenly across the interval.
         """
         now = datetime.now()
-        healthy_request_urls = await QueryInfo.filter(is_healthy=True).values_list("request_url", flat=True)
+        active_request_urls = await QueryInfo.filter(status=QueryStatus.ACTIVE).values_list("request_url", flat=True)
 
-        if not healthy_request_urls:
-            logging.info("No healthy queries found to initialize.")
+        if not active_request_urls:
+            logging.info("No active queries found to initialize.")
             return
 
         # Calculate the spread interval
-        spread_interval = self.interval / max(len(healthy_request_urls), 1)
+        spread_interval = self.interval / max(len(active_request_urls), 1)
 
-        for i, url in enumerate(healthy_request_urls):
+        for i, url in enumerate(active_request_urls):
             # Schedule each query at evenly spaced intervals
             next_time = now + timedelta(seconds=i * spread_interval)
             self.tasks[url] = next_time
@@ -92,12 +92,12 @@ class QueryScheduler:
         now = datetime.now()
         ready_urls = [url for url, time in self.tasks.items() if time <= now]
         if len(ready_urls) > 1:
-            queries = await QueryInfo.filter(is_healthy=True)
+            queries = await QueryInfo.filter(status=QueryStatus.ACTIVE)
             logging.warning(
-                f"Too many URLs being fetched at once: {len(ready_urls)} queries to fetch of {len(queries)} healthy queries")
+                f"Too many URLs being fetched at once: {len(ready_urls)} queries to fetch of {len(queries)} active queries")
             await self.redis_client.publish("error_channel", json.dumps({
                 "error": f"Too many urls being fetched at once: {len(ready_urls)}\nBe aware of ratelimiting!",
-                "reason": f"urls 'next_time' aren't spread well enough, currently {len(queries)} healthy queries"
+                "reason": f"urls 'next_time' aren't spread well enough, currently {len(queries)} active queries"
             }))
 
         # Find the last scheduled time
@@ -130,9 +130,9 @@ class QueryScheduler:
                     "reason": str(e),
                     "trace": tb
                 }))
-                # mark task as unhealthy
-                await QueryInfo.filter(request_url=url).update(is_healthy=False)
-                logging.info(f"Task/url marked as unhealthy: {url}")
+                # mark task as failed
+                await QueryInfo.filter(request_url=url).update(status=QueryStatus.FAILED)
+                logging.info(f"Task/url marked as FAILED: {url}")
 
     def _log_schedule(self):
         """Log the upcoming schedule"""

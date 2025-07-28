@@ -1,8 +1,13 @@
 import re
+from enum import Enum
 
 from tortoise import fields, Model
 from tortoise.validators import RegexValidator
 
+class QueryStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    FAILED = "FAILED"
 
 class QueryInfo(Model):
     """
@@ -29,4 +34,8 @@ class QueryInfo(Model):
     )
     query = fields.CharField(max_length=60, null=True)
     next_check_time = fields.DatetimeField(null=True, description="When this query will be checked next")
-    is_healthy = fields.BooleanField(default=True)
+    status = fields.CharEnumField(
+        QueryStatus,
+        default=QueryStatus.ACTIVE,
+        description="Status of the query: ACTIVE, PAUSED, or FAILED"
+    )
