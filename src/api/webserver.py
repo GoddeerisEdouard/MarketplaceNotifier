@@ -22,7 +22,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.7"  # always edit this in the README too
+API_VERSION = "1.2.8"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -140,11 +140,10 @@ async def create_query_by_link(data: QueryData):
         if distance := params.get("distanceMeters"):
             query_params["distanceMeters"] = distance
 
-    if postcode := params.get("postcode"):
-        query_params["postcode"] = postcode
-        # because we only want to add a distance if there's a postcode
-        if distance := params.get("distanceMeters"):
-            query_params["distanceMeters"] = distance
+    min_price = params.get("PriceCentsFrom")
+    max_price = params.get("PriceCentsTo")
+    if min_price or max_price:
+        query_params["attributeRanges[]"] = [f"PriceCents:{min_price or 'null'}:{max_price or 'null'}"]
 
     query_string = urlencode(query_params, doseq=True, quote_via=quote_plus)
 
