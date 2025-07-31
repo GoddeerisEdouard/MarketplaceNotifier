@@ -7,6 +7,7 @@ from typing import Optional
 from urllib.parse import urlencode, quote_plus, unquote_plus
 
 import tortoise
+from aiohttp import ClientResponseError
 from pydantic import BaseModel, Field
 from quart import Quart
 from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request, Info, document_response, \
@@ -23,7 +24,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.8"  # always edit this in the README too
+API_VERSION = "1.2.9"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -199,7 +200,8 @@ async def get_query_by_id(query_info_id: int):
     qi_py = await QueryInfo_Pydantic.from_tortoise_orm(qi)
     return qi_py.model_dump()
 
-
+# ! be aware that this can throw ClientResponseError 404 if item is "expired"
+# bcs it requests from an external API
 @app.get("/item/<item_id>")
 async def get_additional_listing_info(item_id: str):
     # TODO: create reponse model
@@ -292,6 +294,19 @@ async def handle_value_error(error):
         "error": f"ValueError: {str(error)}",
     }, 400
 
+
+# Handle ClientResponseError specifically
+@app.errorhandler(ClientResponseError)
+async def handle_client_response_error(e: ClientResponseError):
+    traceback_str = traceback.format_exc()
+
+    response = {
+        "error": type(e).__name__,
+        "reason": str(e),
+        "trace": traceback_str
+    }
+
+    return response, e.status
 
 # global error handler for unexpected exceptions
 @app.errorhandler(Exception)
