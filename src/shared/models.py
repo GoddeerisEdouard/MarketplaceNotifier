@@ -4,6 +4,8 @@ from enum import Enum
 from tortoise import fields, Model
 from tortoise.validators import RegexValidator
 
+from shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
+
 class QueryStatus(str, Enum):
     ACTIVE = "ACTIVE"
     PAUSED = "PAUSED"
@@ -19,7 +21,7 @@ class QueryInfo(Model):
         max_length=500,
         # update this! regex should be way broader
         validators=[RegexValidator(
-            r'^https:\/\/www\.2dehands\.be\/(?:q|l)\/[^?]*$',
+            TWEEDEHANDS_BROWSER_URL_REGEX,
             re.M)],
         description="browser URL for user to see the listings on the website"
     )

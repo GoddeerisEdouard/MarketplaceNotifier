@@ -7,7 +7,6 @@ from typing import Optional
 from urllib.parse import urlencode, quote_plus, unquote_plus
 
 import tortoise
-from aiohttp_retry import RetryClient, ExponentialRetry
 from pydantic import BaseModel, Field
 from quart import Quart
 from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request, Info, document_response, \
@@ -16,6 +15,8 @@ from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
+from shared.api_utils import get_retry_client
+from shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
 from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo, QueryStatus
 from config.config import config
@@ -38,8 +39,7 @@ async def startup():
         db_url=config["default_db_url"],
         modules={"models": ["src.shared.models"]}
     )
-    retry_options = ExponentialRetry()  # default retry of 3, retry on all server errors (5xx)
-    app.rc = RetryClient(retry_options=retry_options, raise_for_status=False)
+    app.rc = get_retry_client()
 
 
 @app.after_serving
@@ -52,7 +52,7 @@ class QueryArgs(BaseModel):
 
 # Input model for validation
 class QueryData(BaseModel):
-    browser_url: str = Field(pattern=r'^https:\/\/www\.2dehands\.be\/(?:q|l)\/[^?]*$')
+    browser_url: str = Field(pattern=TWEEDEHANDS_BROWSER_URL_REGEX)
 
 
 # response models (for OpenAPI documentation)

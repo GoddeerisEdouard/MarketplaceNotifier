@@ -1,0 +1,1 @@
+TWEEDEHANDS_BROWSER_URL_REGEX = r'^https:\/\/www\.2dehands\.be\/(?:q|l)\/[^?]*$'

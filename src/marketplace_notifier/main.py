@@ -1,11 +1,11 @@
 import logging
 import sys
 
-from aiohttp_retry import RetryClient, ExponentialRetry
 import redis.asyncio as redisaio
 from tortoise import run_async, Tortoise
 
 from config.config import config
+from shared.api_utils import get_retry_client
 from src.shared.models import QueryInfo
 from src.marketplace_notifier.db_models import LatestListingInfoDB
 from src.marketplace_notifier.scheduler import QueryScheduler
@@ -88,8 +88,8 @@ async def run():
     logging.info("Connected to Redis successfully.")
 
     tn = TweedehandsNotifier()
-    retry_options = ExponentialRetry()  # default retry of 3, retry on all server errors (5xx)
-    async with RetryClient(retry_options=retry_options, raise_for_status=False) as cs:
+    retry_client = get_retry_client()
+    async with retry_client as cs:
         scheduler = QueryScheduler(tn, cs, redis_client, FETCH_INTERVAL)
         await scheduler.start()
 
