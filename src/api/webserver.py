@@ -24,7 +24,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.2.9"  # always edit this in the README too
+API_VERSION = "1.3.0"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -102,7 +102,10 @@ async def create_query_by_link(data: QueryData):
         # but instead, looks like https://www.2dehands.be/q/iphone+15+pro/#sortBy:SORT_INDEX...
         parsed_browser_url = parsed_browser_url._replace(path=parsed_browser_url.path + "/")
 
-    browser_url_with_correct_filters = parsed_browser_url._replace(fragment=filtered_fragment).geturl()
+    # we remove the 'query' (aka the parts of the browser_url followed by "/?<this>"
+    # because it's for example ".../?_gl=..." followed by a long ID, which is irrelevant
+    # this only seems to be present when copying the URL from a mobile browser
+    browser_url_with_correct_filters = parsed_browser_url._replace(query='')._replace(fragment=filtered_fragment).geturl()
 
     path_parts = parsed_browser_url.path.strip('/').split('/')
 
@@ -122,18 +125,21 @@ async def create_query_by_link(data: QueryData):
         if l1_category_value is None:
             raise ValueError(f"Invalid browser url: l1 category ({l1_category_name}) not found")
         query_params["l1CategoryId"] = l1_category_value["id"]
-        if len(path_parts) > 2:
+        if (len(path_parts) > 2) and (path_parts[2] != "q"):
             l2_category_name = path_parts[2]
             l2_category_value = l2_category_dict.get(l1_category_name).get(l2_category_name)
             if l2_category_value is None:
                 raise ValueError(f"Invalid browser url: l2 category ({l2_category_name}) not found")
             query_params["l2CategoryId"] = l2_category_value["id"]  # only set if there's a subcategory
 
-        if query := params.get("q"):
-            query_params["query"] = unquote_plus(query)
-    elif path_parts[0] == "q":
-        # query without a category
-        query_params["query"] = unquote_plus(path_parts[1])
+    for index, path_part in enumerate(path_parts[:-1]):
+        if path_part == "q":
+            # query is next part after "q"
+            query_params["query"] = unquote_plus(path_parts[index+1])
+            break
+    # if the query isn't set by the path, we try to get it from the params
+    if (not query_params.get("query")) and (query := params.get("q")):
+        query_params["query"] = unquote_plus(query)
 
     if postcode := params.get("postcode"):
         query_params["postcode"] = postcode
