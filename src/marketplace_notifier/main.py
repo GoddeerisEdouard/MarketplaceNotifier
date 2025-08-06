@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import sys
 
 import redis.asyncio as redisaio
@@ -20,7 +21,13 @@ logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # File handler
-file_handler = logging.FileHandler('requests.log', encoding='utf-8')
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+file_handler = RotatingFileHandler(
+    'requests.log',
+    maxBytes=MAX_FILE_SIZE,
+    backupCount=3,
+    encoding='utf-8'
+)
 file_handler.setFormatter(formatter)
 
 # Console handler
