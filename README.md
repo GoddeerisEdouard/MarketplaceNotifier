@@ -1,5 +1,5 @@
 # MarketplaceNotifier
-**Version:** 1.3.0
+**Version:** 1.3.1
 ## What is this?
 A service to get notified the second a great deal is listed.  
 

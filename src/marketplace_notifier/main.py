@@ -6,7 +6,7 @@ import redis.asyncio as redisaio
 from tortoise import run_async, Tortoise
 
 from config.config import config
-from shared.api_utils import get_retry_client
+from src.shared.api_utils import get_retry_client
 from src.shared.models import QueryInfo
 from src.marketplace_notifier.db_models import LatestListingInfoDB
 from src.marketplace_notifier.scheduler import QueryScheduler

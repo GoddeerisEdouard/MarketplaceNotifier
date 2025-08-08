@@ -16,9 +16,8 @@ from tortoise import Tortoise
 from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
-from shared.api_utils import get_retry_client
-from shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
-from src.shared.api_utils import get_request_response
+from src.shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
+from src.shared.api_utils import get_request_response, get_retry_client
 from src.shared.models import QueryInfo, QueryStatus
 from config.config import config
 

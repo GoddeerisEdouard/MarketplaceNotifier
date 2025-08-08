@@ -4,7 +4,7 @@ from enum import Enum
 from tortoise import fields, Model
 from tortoise.validators import RegexValidator
 
-from shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
+from src.shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
 
 class QueryStatus(str, Enum):
     ACTIVE = "ACTIVE"
