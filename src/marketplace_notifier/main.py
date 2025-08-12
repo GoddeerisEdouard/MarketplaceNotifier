@@ -95,7 +95,10 @@ async def run():
     logging.info("Connected to Redis successfully.")
 
     tn = TweedehandsNotifier()
-    retry_client = get_retry_client()
+    # we sometimes get this error after a while of fetching:
+    # aiohttp.client_exceptions.ClientResponseError: 400, message='Bad Request', url='.../api/...'
+    # so we retry if the status code is 400
+    retry_client = get_retry_client(statuses=[400])
     async with retry_client as cs:
         scheduler = QueryScheduler(tn, cs, redis_client, FETCH_INTERVAL)
         await scheduler.start()

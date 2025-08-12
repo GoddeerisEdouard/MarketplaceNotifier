@@ -7,6 +7,8 @@ from datetime import timedelta, datetime
 from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo, QueryStatus
 
+LISTING_ERROR_CHANNEL = "listing_error"
+GENERIC_WARNING_CHANNEL = "warning"
 
 class QueryScheduler:
     """
@@ -93,10 +95,11 @@ class QueryScheduler:
         ready_urls = [url for url, time in self.tasks.items() if time <= now]
         if len(ready_urls) > 1:
             queries = await QueryInfo.filter(status=QueryStatus.ACTIVE)
-            logging.warning(
-                f"Too many URLs being fetched at once: {len(ready_urls)} queries to fetch of {len(queries)} active queries")
-            await self.redis_client.publish("error_channel", json.dumps({
-                "error": f"Too many urls being fetched at once: {len(ready_urls)}\nBe aware of ratelimiting!",
+            msg = (f"Too many URLs being fetched at once: {len(ready_urls)} queries to fetch of {len(queries)} active queries\n"
+                   f"Be aware of ratelimiting!")
+            logging.warning(msg)
+            await self.redis_client.publish(GENERIC_WARNING_CHANNEL, json.dumps({
+                "message": msg,
                 "reason": f"urls 'next_time' aren't spread well enough, currently {len(queries)} active queries"
             }))
 
@@ -125,14 +128,16 @@ class QueryScheduler:
             except Exception as e:
                 tb = traceback.format_exc()
                 logging.error(f"Error fetching {url}: {type(e)}{str(e)}\ntraceback: {tb}")
-                await self.redis_client.publish("error_channel", json.dumps({
-                    "error": f"Error while fetching {url}",
-                    "reason": str(e),
-                    "trace": tb
-                }))
                 # mark task as failed
                 await QueryInfo.filter(request_url=url).update(status=QueryStatus.FAILED)
                 logging.info(f"Task/url marked as FAILED: {url}")
+
+                await self.redis_client.publish(LISTING_ERROR_CHANNEL, json.dumps({
+                    "request_url": url,
+                    "error": type(e),
+                    "reason": str(e),
+                    "trace": tb
+                }))
 
     def _log_schedule(self):
         """Log the upcoming schedule"""

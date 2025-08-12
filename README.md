@@ -159,13 +159,29 @@ We also store the latest item_id of a browser_url in the DB.
 New listings are sent with Redis to the `'listings'` channel.  
 A webserver is running (on `http://localhost:5000`) to handle adding/removing/getting the 2dehands browser_urls you're monitoring.
 
-Errors during fetching are sent tot the `error_channel` channel.  
-So you should definitely also subscribe to that channel.  
-These have a format of:
+---
+
+URL specific errors are sent to `listing_error`  
+The messages are in this format:  
 ```json
-'{"error":  "...", "reason":  "...", "traceback":  "..."}'
+{"request_url": <request_url>, "error": "...", "reason": "...", "traceback": "..."}
 ```
-! the traceback key is optional!
+! the traceback key is optional!  
+
+When this error is raised, the monitor service will stop monitoring that specific URL.  
+It'll set the status to `FAILED` in the DB.  
+You can set the status back to `ACTIVE` by sending a POST request to `/query/status`.  
+(check the API endpoints for the exact payload format)
+
+---
+
+Generic warning messages are sent to `warning` channel  
+```json
+{"message": "...",
+"reason":  "..."}
+```
+Example of a warning can be -> too many URLs are being fetched together.  
+This may cause the risk of being ratelimited.
 
 ---
 There are 3 services:

@@ -1,16 +1,18 @@
 import logging
 from http import HTTPStatus
 from types import SimpleNamespace
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Iterable
 
 from aiohttp_retry import RetryClient, ExponentialRetry
 from aiohttp import ClientSession, TraceConfig, TraceRequestStartParams, TraceRequestExceptionParams, \
     TraceRequestEndParams, ClientConnectorDNSError
 
 
-def get_retry_client() -> RetryClient:
+def get_retry_client(exceptions: Iterable[type[Exception]] = None, statuses: Iterable[int] = None) -> RetryClient:
     """
     RetryClient which includes logging the retries
+    exceptions: exceptions to retry on
+    statuses: HTTP status codes to retry on
     """
 
     # Store last error/status for retry logging
@@ -67,7 +69,9 @@ def get_retry_client() -> RetryClient:
     trace_config.on_request_end.append(on_request_end)
     trace_config.on_request_exception.append(on_request_exception)
 
-    retry_options = ExponentialRetry(attempts=4, start_timeout=3.0, exceptions={ClientConnectorDNSError})
+    # default ClientDNSError, this is raised when the internet seems down
+    exceptions = {ClientConnectorDNSError} if exceptions is None else {ClientConnectorDNSError, *exceptions}
+    retry_options = ExponentialRetry(attempts=4, start_timeout=3.0, exceptions=exceptions, statuses=statuses)
     return RetryClient(
         retry_options=retry_options,
         trace_configs=[trace_config],
@@ -99,12 +103,8 @@ aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2deha
                 return await response.text()
             return await response.json()
         elif response.status == HTTPStatus.NO_CONTENT:
-            logging.warning(f"Requested URI: {URI} returns no content...")
+            logging.info(f"Requested URI: {URI} returns no content...")
             return ""
-    logging.warning("Got status code %d when requesting %s\n-----", response.status, URI)
+    logging.error("Failed %s after multiple retries, got error %d\n%s\n------", URI, response.status, response)
 
-    logging.error("Failed after multiple retries, got error %d\n%s\n------", response.status, response)
-
-    # TODO: handle when this error raises: when even after several retries, the server still doesn't respond
-    # raises a aiohttp.ClientResponseError
     raise response.raise_for_status()
