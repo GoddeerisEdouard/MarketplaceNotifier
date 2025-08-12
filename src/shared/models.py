@@ -8,7 +8,6 @@ from src.shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
 
 class QueryStatus(str, Enum):
     ACTIVE = "ACTIVE"
-    PAUSED = "PAUSED"
     FAILED = "FAILED"
 
 class QueryInfo(Model):
@@ -39,5 +38,5 @@ class QueryInfo(Model):
     status = fields.CharEnumField(
         QueryStatus,
         default=QueryStatus.ACTIVE,
-        description="Status of the query: ACTIVE, PAUSED, or FAILED"
+        description="Status of the query: ACTIVE or FAILED"
     )
