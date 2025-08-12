@@ -7,7 +7,7 @@ from datetime import timedelta, datetime
 from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo, QueryStatus
 
-LISTING_ERROR_CHANNEL = "listing_error"
+REQUEST_URL_ERROR_CHANNEL = "request_url_error"
 GENERIC_WARNING_CHANNEL = "warning"
 
 class QueryScheduler:
@@ -132,7 +132,7 @@ class QueryScheduler:
                 await QueryInfo.filter(request_url=url).update(status=QueryStatus.FAILED)
                 logging.info(f"Task/url marked as FAILED: {url}")
 
-                await self.redis_client.publish(LISTING_ERROR_CHANNEL, json.dumps({
+                await self.redis_client.publish(REQUEST_URL_ERROR_CHANNEL, json.dumps({
                     "request_url": url,
                     "error": type(e),
                     "reason": str(e),

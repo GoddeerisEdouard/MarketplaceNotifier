@@ -161,7 +161,7 @@ A webserver is running (on `http://localhost:5000`) to handle adding/removing/ge
 
 ---
 
-URL specific errors are sent to `listing_error`  
+URL specific errors are sent to `request_url_error`  
 The messages are in this format:  
 ```json
 {"request_url": <request_url>, "error": "...", "reason": "...", "traceback": "..."}
@@ -169,7 +169,7 @@ The messages are in this format:
 ! the traceback key is optional!  
 
 When this error is raised, the monitor service will stop monitoring that specific URL.  
-It'll set the status to `FAILED` in the DB.  
+It'll also set the status to `FAILED` in the DB.  
 You can set the status back to `ACTIVE` by sending a POST request to `/query/status`.  
 (check the API endpoints for the exact payload format)
 
