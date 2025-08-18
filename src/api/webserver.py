@@ -1,6 +1,5 @@
 import json
 import traceback
-import re
 import urllib.parse
 from pathlib import Path
 from typing import Optional
@@ -17,13 +16,13 @@ from tortoise.contrib.quart import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
 from src.shared.constants import TWEEDEHANDS_BROWSER_URL_REGEX
-from src.shared.api_utils import get_request_response, get_retry_client
+from src.shared.api_utils import get_retry_client
 from src.shared.models import QueryInfo, QueryStatus
 from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.3.0"  # always edit this in the README too
+API_VERSION = "1.3.2"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -205,71 +204,23 @@ async def get_query_by_id(query_info_id: int):
     qi_py = await QueryInfo_Pydantic.from_tortoise_orm(qi)
     return qi_py.model_dump()
 
-# ! be aware that this can throw ClientResponseError 404 if item is "expired"
-# bcs it requests from an external API
 @app.get("/item/<item_id>")
 async def get_additional_listing_info(item_id: str):
-    # TODO: create reponse model
-    # returns additional info of a listing
-    # being the minimum bid, the current bids
-    # as well as the seller's info (ID/bank verified, reviews, etc.)
+    url = f"https://app.2dehands.be/app/vip/v4/item/{item_id}"
+    headers = {"ecg-locale": "nl-BE", "content-type": "application/json"}
 
-    # response example:
-    # {
-    #     "bidsInfo": {
-    #         "bids": [
-    #             {
-    #                 "date": "2025-06-05T17:22:22Z",
-    #                 "id": 1498104034,
-    #                 "user": {
-    #                     "id": 11111111,
-    #                     "nickname": "a bidder nickname"
-    #                 },
-    #                 "value": 36000
-    #             }
-    #         ],
-    #         "currentMinimumBid": 30000, # THIS IS AN OPTIONAL FIELD
-    #         # if this is not present, it means there's no minimum bid for the listing (just "BIEDEN")
-    #         it's also possible that this is 0 or -1, which means the same (just "BIEDEN")
-    #         "isBiddingEnabled": true, # be aware, if this is false, the listing is not for bidding
-    #         "isRemovingBidEnabled": false
-    #     },
-    #     "sellerInfo": {
-    #         "averageScore": 0,
-    #         "bankAccount": false,
-    #         "identification": false,
-    #         "numberOfReviews": 0,
-    #         "paymentMethod": {
-    #             "name": "bancontact"
-    #         },
-    #         "phoneNumber": true,
-    #         "profilePictures": {},
-    #         "salesRepresentatives": [],
-    #         "smbVerified": false
-    #     }
-    # }
 
-    url = f"https://www.2dehands.be/{item_id}"
+    async with app.rc.post(url, headers=headers) as response:
+        if response.status == 404:
+            return {
+                "error": "Item Not Found",
+            }, 404
+    json_response = await response.json()
+    # if ["metaData"]["adStatus"] == "CLOSED" => item is expired
+    # the status can also be ACTIVE ofcourse
 
-    response = await get_request_response(retry_client=app.rc, URI=url, json_response=False)
-
-    match = re.search(r'window\.__CONFIG__\s*=\s*(\{.*?\});', response, re.DOTALL)
-    if not match:
-        raise Exception("Failed to find window.__CONFIG__ in the response")
-
-    config_json_str = match.group(1)
-    window_config = json.loads(config_json_str)
-
-    listing = window_config["listing"]
-    seller_id = listing["seller"]["id"]
-
-    result = {"bidsInfo": listing["bidsInfo"]}
-    url = f"https://www.2dehands.be/v/api/seller-profile/{seller_id}"
-    seller_response = await get_request_response(retry_client=app.rc, URI=url)
-    result["sellerInfo"] = seller_response
-
-    return result
-
+    del json_response["recommendedItems"]
+    return json_response
 
 @app.delete("/query/<query_info_id>")
 async def delete_query(query_info_id: int):

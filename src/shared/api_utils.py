@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from typing import Optional, Dict, Any, Iterable
 
 from aiohttp_retry import RetryClient, ExponentialRetry
-from aiohttp import ClientSession, TraceConfig, TraceRequestStartParams, TraceRequestExceptionParams, \
-    TraceRequestEndParams, ClientConnectorDNSError
+from aiohttp import (ClientSession, TraceConfig, TraceRequestStartParams, TraceRequestEndParams,
+                     ClientConnectorDNSError)
 
 
 def get_retry_client(exceptions: Iterable[type[Exception]] = None, statuses: Iterable[int] = None) -> RetryClient:
@@ -29,19 +29,8 @@ def get_retry_client(exceptions: Iterable[type[Exception]] = None, statuses: Ite
 
         # store status if it might trigger a retry (4xx/5xx) ! this depends on the retry_options!
         if status >= 400:
-            last_error_info[url] = f"HTTP {status}"
-
-    # Callback to capture exceptions
-    async def on_request_exception(
-            session: ClientSession,
-            trace_config_ctx: SimpleNamespace,
-            params: TraceRequestExceptionParams,
-    ) -> None:
-        exception = params.exception
-        url = str(params.url)
-
-        # store exception info
-        last_error_info[url] = f"{type(exception).__name__}: {str(exception)}"
+            response_text = await params.response.text()
+            last_error_info[url] = {"status": status, "reason": params.response.reason, "text": response_text}
 
     # Callback to log retries (but skip first attempt)
     async def on_request_start(
@@ -67,7 +56,6 @@ def get_retry_client(exceptions: Iterable[type[Exception]] = None, statuses: Ite
     trace_config = TraceConfig()
     trace_config.on_request_start.append(on_request_start)
     trace_config.on_request_end.append(on_request_end)
-    trace_config.on_request_exception.append(on_request_exception)
 
     # default ClientDNSError, this is raised when the internet seems down
     exceptions = {ClientConnectorDNSError} if exceptions is None else {ClientConnectorDNSError, *exceptions}
@@ -105,6 +93,6 @@ aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2deha
         elif response.status == HTTPStatus.NO_CONTENT:
             logging.info(f"Requested URI: {URI} returns no content...")
             return ""
-    logging.error("Failed %s after multiple retries, got error %d\n%s\n------", URI, response.status, response)
+    logging.error(f"Failed {URI} after multiple retries, got error {response.status}\n{response}\n------")
 
     raise response.raise_for_status()
