@@ -134,9 +134,9 @@ class QueryScheduler:
 
                 await self.redis_client.publish(REQUEST_URL_ERROR_CHANNEL, json.dumps({
                     "request_url": url,
-                    "error": type(e),
+                    "error": type(e).__name__,
                     "reason": str(e),
-                    "trace": tb
+                    "traceback": tb
                 }))
 
     def _log_schedule(self):
