@@ -22,7 +22,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.3.2"  # always edit this in the README too
+API_VERSION = "1.3.3"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -212,10 +212,18 @@ async def get_additional_listing_info(item_id: str):
 
     async with app.rc.post(url, headers=headers) as response:
         if response.status == 404:
+            # "code" will be "NOT_FOUND"
             return {
                 "error": "Item Not Found",
             }, 404
+
     json_response = await response.json()
+    # This error is raised when a listing exists, but you're fetching the details too soon.
+    # so retrying will most likely result in status 200
+    if response.status == 400 and json_response["code"] == "LISTING_NOT_FOUND":
+        return {
+            "error": "Details of item not available yet, try again",
+        }, 400
     # if ["metaData"]["adStatus"] == "CLOSED" => item is expired
     # the status can also be ACTIVE ofcourse
 
