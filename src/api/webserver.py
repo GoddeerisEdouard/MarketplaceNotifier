@@ -22,7 +22,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.3.4"  # always edit this in the README too
+API_VERSION = "1.3.5"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -211,26 +211,27 @@ async def get_additional_listing_info(item_id: str):
 
 
     async with app.rc.post(url, headers=headers) as response:
-        if response.status == 404:
+        status = response.status
+        if status == 404:
             # "code" will be "NOT_FOUND"
             return {
                 "error": "Item Not Found",
-            }, response.status
+            }, status
 
-    json_response = await response.json()
+        json_response = await response.json()
     # This error is raised when a listing exists, but you're fetching the details too soon.
     # so retrying will most likely result in status 200
-    if response.status == 400 and json_response["code"] == "LISTING_NOT_FOUND":
+    if status == 400 and json_response["code"] == "LISTING_NOT_FOUND":
         return {
             "error": "Details of item not available yet, try again",
-        }, response.status
+        }, status
     # if ["metaData"]["adStatus"] == "CLOSED" => item is expired
     # the status can also be ACTIVE ofcourse
 
     if json_response.get("recommendedItems"):
         del json_response["recommendedItems"]
 
-    return json_response, response.status
+    return json_response, status
 
 @app.delete("/query/<query_info_id>")
 async def delete_query(query_info_id: int):
