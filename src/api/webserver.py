@@ -217,6 +217,7 @@ async def get_additional_listing_info(item_id: str):
             return {
                 "error": "Item Not Found",
             }, status
+        # status 403 means we're ratelimited by cloudfront
 
         json_response = await response.json()
     # This error is raised when a listing exists, but you're fetching the details too soon.

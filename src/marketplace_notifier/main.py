@@ -98,6 +98,7 @@ async def run():
     # we sometimes get this error after a while of fetching:
     # aiohttp.client_exceptions.ClientResponseError: 400, message='Bad Request', url='.../api/...'
     # so we retry if the status code is 400
+    # TODO: check if it actually retries for that status
     retry_client = get_retry_client(statuses=[400])
     async with retry_client as cs:
         scheduler = QueryScheduler(tn, cs, redis_client, FETCH_INTERVAL)

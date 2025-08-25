@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import traceback
 from datetime import timedelta, datetime
 
@@ -9,6 +10,8 @@ from src.shared.models import QueryInfo, QueryStatus
 
 REQUEST_URL_ERROR_CHANNEL = "request_url_error"
 GENERIC_WARNING_CHANNEL = "warning"
+SLEEP_INTERVAL = 10  # seconds between checking for new queries or changes
+WEBSERVER_URL = f"http://{'webserver' if os.getenv('USE_DOCKER_CONFIG', 'false').lower() == 'true' else 'localhost'}:5000"
 
 class QueryScheduler:
     """
@@ -42,7 +45,7 @@ class QueryScheduler:
             active_request_urls = await QueryInfo.filter(status=QueryStatus.ACTIVE).values_list("request_url", flat=True)
             if not active_request_urls:
                 logging.info("No (active) queries found, sleeping...")
-                await asyncio.sleep(10)
+                await asyncio.sleep(SLEEP_INTERVAL)
                 continue
 
             removed_urls = set(self.tasks.keys()) - set(active_request_urls)
@@ -64,7 +67,7 @@ class QueryScheduler:
             self._log_schedule()
 
             # wait a bit before checking again
-            await asyncio.sleep(10)
+            await asyncio.sleep(SLEEP_INTERVAL)
 
     async def _initialize_query_schedule(self):
         """
@@ -113,12 +116,11 @@ class QueryScheduler:
                 logging.info(f"Fetching: {url}")
 
                 result = await get_request_response(self.retry_client, url)
-                await self.notifier.process_listings({url: result["listings"]}, self.redis_client)
+                await self.notifier.process_listings({url: result["listings"]}, self.redis_client, self.retry_client)
 
                 # reschedule for next interval
                 # we just add the interval to the current time
                 next_time = last_scheduled_time + timedelta(seconds=(i + 1) * spread_interval)
-                self.tasks[url] = next_time
                 self.tasks[url] = next_time
                 logging.info(f"Next fetch scheduled for {next_time.strftime('%H:%M:%S')}: {url}")
 

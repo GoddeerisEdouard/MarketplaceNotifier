@@ -3,7 +3,7 @@ from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Optional, Dict, Any, Iterable
 
-from aiohttp_retry import RetryClient, ExponentialRetry
+from aiohttp_retry import RetryClient, ExponentialRetry, RetryOptions
 from aiohttp import (ClientSession, TraceConfig, TraceRequestStartParams, TraceRequestEndParams,
                      ClientConnectorDNSError)
 
@@ -67,7 +67,7 @@ def get_retry_client(exceptions: Iterable[type[Exception]] = None, statuses: Ite
     )
 
 async def get_request_response(retry_client: RetryClient, URI: str,
-                               headers: Optional[Dict] = None, json_response: bool = True) -> Any:
+                               headers: Optional[Dict] = None, json_response: bool = True, retry_options: RetryOptions = None) -> Any:
     """
     uses client_session with given headers and a user-agent
     logs errors
@@ -85,7 +85,8 @@ async def get_request_response(retry_client: RetryClient, URI: str,
     raise ClientConnectorError(req.connection_key, exc) from exc
 aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2dehands.be:443 ssl:False [Temporary failure in name resolution]
     """
-    async with retry_client.get(URI, headers=headers) as response:
+    ro = retry_options or retry_client.retry_options
+    async with retry_client.get(URI, headers=headers, retry_options=ro) as response:
         if response.status == HTTPStatus.OK:
             if not json_response:
                 return await response.text()
@@ -95,4 +96,4 @@ aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2deha
             return ""
     logging.error(f"Failed {URI} after multiple retries, got error {response.status}\n{response}\n------")
 
-    raise response.raise_for_status()
+    response.raise_for_status()

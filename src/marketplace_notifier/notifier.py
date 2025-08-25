@@ -3,12 +3,19 @@ import json
 import logging
 from typing import List, Optional, Dict, Any
 
+import aiohttp_retry
 import redis.asyncio as redis
-from aiohttp_retry import RetryClient
+from aiohttp_retry import RetryClient, ExponentialRetry
 
 from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo
 from src.marketplace_notifier.db_models import LatestListingInfoDB
+from tests.test_webserver import WEBSERVER_URL
+
+# how many of the last listings to fetch details for
+# this is to prevent fetching all new listings when a new url is added, because then we'd fetch all details for all those listings
+# a too big number will cause rate limiting
+X_LAST_LISTINGS_DETAILS_FETCHED = 5
 
 
 class TweedehandsNotifier:
@@ -44,8 +51,27 @@ class TweedehandsNotifier:
 
         return query_url_listings_dict
 
+    async def _append_details_to_listing(self, original_listing_dict: dict, retry_client: RetryClient) -> dict:
+        """
+        helper method which extends a listing's info with additional details
+        listing info is a raw dict from the 2dehands API
+        details: min bid, seller review score, seller verified status, ...
+
+        return: original_listing dict with additional "details" key containing the details dict
+        """
+        item_id = original_listing_dict.get("itemId")
+        # we want to retry if the status code is 400
+        retry_exceptions = set(retry_client.retry_options.exceptions)
+        retry_statuses = retry_client.retry_options.statuses
+        # add 404 too
+        retry_options = ExponentialRetry(attempts=4, start_timeout=3.0, exceptions=retry_exceptions, statuses={*retry_statuses, 404})
+        response_json = await get_request_response(retry_client, f"{WEBSERVER_URL}/item/{item_id}", retry_options=retry_options)
+
+        enhanced_listing = {**original_listing_dict, "details": response_json}
+        return enhanced_listing
+
     async def process_listings(self, request_url_all_listings_dict: Dict[
-        str, List[Dict[Any, Any]]], async_redis_client: redis.client) -> None:
+        str, List[Dict[Any, Any]]], async_redis_client: redis.client, retry_client: aiohttp_retry.RetryClient) -> None:
         """
         stores some attributes of listing in DB
         publishes new listings to redis pubsub channel
@@ -96,6 +122,11 @@ class TweedehandsNotifier:
                         await latest_listing_for_request_url.save()
 
                         logging.info(f"updated latest item_id to <{listing['itemId']}, title: {listing['title']}>")
+
+                if i < X_LAST_LISTINGS_DETAILS_FETCHED:
+                    # we only add details to some the latest listings, to prevent rate limiting
+                    new_non_ad_listings_of_request_url[i] = await self._append_details_to_listing(listing, retry_client)
+                    # listings without details will not contain the "details" key
 
             logging.info(
                 f'found {total_non_ad_new_listings} new NON-AD listings for {request_url}, publishing to redis...')

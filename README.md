@@ -37,7 +37,10 @@ RESPONSE:
 Next step is to handle the incoming new listings data (with Redis).  
 New listings data is being sent in the `listings` channel in this format:     
 `'{"request_url": <request_url>, "new_listings": [<Listing objects>]}'`  
-check [api_models.py](src/misc/api_models.py) for the `<Listing>` object structure.
+check [api_models.py](src/misc/api_models.py) for the `<Listing>` object structure.  
+! there's an additional "details" key added to some of these serialized objects.  
+The value is the dict response of `/item/{item_id}` of the endpoint in the webserver.  
+! not all listings will have this key, mostly only the X latest ones, because of rate limiting.  
 
 Load the data as JSON:
 `json.loads(data["data"])`
