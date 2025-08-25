@@ -10,6 +10,7 @@ def load_config():
     env = "docker" if os.getenv('USE_DOCKER_CONFIG', 'false').lower() == 'true' else "local"
     config_dict = {
         "webserver_host": config[env]["webserver_host"],
+        "webserver_url" : config[env]["webserver_url"],
         "redis_host": config[env]["redis_host"],
         "database_path": None
     }

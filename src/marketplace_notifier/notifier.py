@@ -7,10 +7,10 @@ import aiohttp_retry
 import redis.asyncio as redis
 from aiohttp_retry import RetryClient, ExponentialRetry
 
+from config.config import config
 from src.shared.api_utils import get_request_response
 from src.shared.models import QueryInfo
 from src.marketplace_notifier.db_models import LatestListingInfoDB
-from tests.test_webserver import WEBSERVER_URL
 
 # how many of the last listings to fetch details for
 # this is to prevent fetching all new listings when a new url is added, because then we'd fetch all details for all those listings
@@ -65,7 +65,7 @@ class TweedehandsNotifier:
         retry_statuses = retry_client.retry_options.statuses
         # add 404 too
         retry_options = ExponentialRetry(attempts=4, start_timeout=3.0, exceptions=retry_exceptions, statuses={*retry_statuses, 404})
-        response_json = await get_request_response(retry_client, f"{WEBSERVER_URL}/item/{item_id}", retry_options=retry_options)
+        response_json = await get_request_response(retry_client, f"http://{config['webserver_url']}/item/{item_id}", retry_options=retry_options)
 
         enhanced_listing = {**original_listing_dict, "details": response_json}
         return enhanced_listing
