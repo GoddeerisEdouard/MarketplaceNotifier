@@ -9,8 +9,7 @@ from config.config import config
 from src.shared.api_utils import get_retry_client
 from src.shared.models import QueryInfo
 from src.marketplace_notifier.db_models import LatestListingInfoDB
-from src.marketplace_notifier.scheduler import QueryScheduler
-from src.marketplace_notifier.notifier import TweedehandsNotifier
+from src.marketplace_notifier.notifier import Notifier
 
 FETCH_INTERVAL = 2 * 60  # 2 minutes
 # Create a custom logger
@@ -94,15 +93,14 @@ async def run():
         raise e
     logging.info("Connected to Redis successfully.")
 
-    tn = TweedehandsNotifier()
     # we sometimes get this error after a while of fetching:
     # aiohttp.client_exceptions.ClientResponseError: 400, message='Bad Request', url='.../api/...'
     # so we retry if the status code is 400
     # TODO: check if it actually retries for that status
     retry_client = get_retry_client(statuses=[400])
     async with retry_client as cs:
-        scheduler = QueryScheduler(tn, cs, redis_client, FETCH_INTERVAL)
-        await scheduler.start()
+        notifier = Notifier(cs, redis_client, FETCH_INTERVAL)
+        await notifier.start()
 
 
 if __name__ == '__main__':

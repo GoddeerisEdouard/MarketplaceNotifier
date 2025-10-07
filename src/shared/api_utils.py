@@ -1,14 +1,14 @@
 import logging
 from http import HTTPStatus
 from types import SimpleNamespace
-from typing import Optional, Dict, Any, Iterable
+from typing import Optional, Dict, Any, Iterable, Type
 
 from aiohttp_retry import RetryClient, ExponentialRetry, RetryOptions
 from aiohttp import (ClientSession, TraceConfig, TraceRequestStartParams, TraceRequestEndParams,
                      ClientConnectorDNSError)
 
 
-def get_retry_client(exceptions: Iterable[type[Exception]] = None, statuses: Iterable[int] = None) -> RetryClient:
+def get_retry_client(exceptions: Iterable[Type[Exception]] = None, statuses: Iterable[int] = None) -> RetryClient:
     """
     RetryClient which includes logging the retries
     exceptions: exceptions to retry on
@@ -78,6 +78,8 @@ async def get_request_response(retry_client: RetryClient, URI: str,
     elif "user-agent" not in headers:
         headers = dict(headers, **{
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"})
+    if json_response:
+        headers["accept"] = "application/json"
 
     logging.info("making request for %s", URI)
     # TODO: handle exception when we lose connection (or when server refuses)
@@ -86,6 +88,9 @@ async def get_request_response(retry_client: RetryClient, URI: str,
 aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host www.2dehands.be:443 ssl:False [Temporary failure in name resolution]
     """
     ro = retry_options or retry_client.retry_options
+    # when there's no internet:
+    # TODO: handle raise ClientConnectorDNSError(req.connection_key, exc) from exc
+    # aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host www.2dehands.be:443 ssl:default [getaddrinfo failed]
     async with retry_client.get(URI, headers=headers, retry_options=ro) as response:
         if response.status == HTTPStatus.OK:
             if not json_response:

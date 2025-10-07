@@ -1,9 +1,12 @@
 # MarketplaceNotifier
-**Version:** 1.3.5
+>**Versions:**  
+>> **Webserver (API)**: 1.3.5  
+>> **Notifier (Redis)**: 1.1.0
+
 ## What is this?
 A service to get notified the second a great deal is listed.  
 
-supported *marketplace* (so far):
+supported *marketplace*:
 - [x] [2dehands](https://www.2dehands.be)
 
 ## How does this work?
