@@ -135,6 +135,9 @@ async def create_query_by_link(data: QueryData):
             # query is next part after "q"
             query_params["query"] = unquote_plus(path_parts[index+1])
             break
+        # if the query isn't set by the path, we try to get it from the params
+        if (not query_params.get("query")) and (query := params.get("q")):
+            query_params["query"] = unquote_plus(query)
 
     if postcode := params.get("postcode"):
         query_params["postcode"] = postcode
