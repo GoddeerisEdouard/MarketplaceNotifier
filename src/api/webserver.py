@@ -22,7 +22,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.3.5"  # always edit this in the README too
+API_VERSION = "1.3.6"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
