@@ -135,9 +135,6 @@ async def create_query_by_link(data: QueryData):
             # query is next part after "q"
             query_params["query"] = unquote_plus(path_parts[index+1])
             break
-    # if the query isn't set by the path, we try to get it from the params
-    if (not query_params.get("query")) and (query := params.get("q")):
-        query_params["query"] = unquote_plus(query)
 
     if postcode := params.get("postcode"):
         query_params["postcode"] = postcode
@@ -156,8 +153,7 @@ async def create_query_by_link(data: QueryData):
     # END of conversion from browser url to request url
 
     try:
-        qi = await QueryInfo.create(browser_url=browser_url_with_correct_filters, request_url=full_request_url,
-                                    query=query_params.get("query"))
+        qi = await QueryInfo.create(browser_url=browser_url_with_correct_filters, request_url=full_request_url)
     except tortoise.exceptions.IntegrityError:
         return {
             "error": "Query already exists",
@@ -176,6 +172,9 @@ async def set_query_status(data: UpdateQueryStatus):
     if updated_count == 0:
         return {"error": "QueryInfo not found"}, 404
     return {}, 204
+
+#TODO: add a test_request_url endpoint, which returns the X latest listings for a req URL
+# internally, the endpoint also sorts the items
 
 @app.get("/query")
 @validate_querystring(QueryArgs)

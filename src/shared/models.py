@@ -33,7 +33,6 @@ class QueryInfo(Model):
             re.M)],
         description="url to use for GET request"
     )
-    query = fields.CharField(max_length=60, null=True)
     next_check_time = fields.DatetimeField(null=True, description="When this query will be checked next")
     status = fields.CharEnumField(
         QueryStatus,
