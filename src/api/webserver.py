@@ -22,7 +22,7 @@ from config.config import config
 
 app = Quart(__name__)
 app.rc = None
-API_VERSION = "1.3.6"  # always edit this in the README too
+API_VERSION = "1.3.7"  # always edit this in the README too
 QuartSchema(app, info=Info(title="Marketplace Monitor API", version=API_VERSION))
 QueryInfo_Pydantic = pydantic_model_creator(QueryInfo)
 QueryInfo_Pydantic_List = pydantic_queryset_creator(QueryInfo)
@@ -158,9 +158,8 @@ async def create_query_by_link(data: QueryData):
     try:
         qi = await QueryInfo.create(browser_url=browser_url_with_correct_filters, request_url=full_request_url)
     except tortoise.exceptions.IntegrityError:
-        return {
-            "error": "Query already exists",
-        }, 500
+        # when either the browser_url & request_url are already present in the DB
+        qi = await QueryInfo.get(browser_url=browser_url_with_correct_filters, request_url=full_request_url)
     except Exception as e:
         raise e
 

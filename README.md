@@ -1,6 +1,6 @@
 # MarketplaceNotifier
 >**Versions:**  
->> **Webserver (API)**: 1.3.6   
+>> **Webserver (API)**: 1.3.7    
 >> **Notifier (Redis)**: 1.1.0
 
 ## What is this?
