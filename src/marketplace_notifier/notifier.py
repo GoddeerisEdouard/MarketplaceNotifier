@@ -101,16 +101,6 @@ class Notifier:
         now = datetime.now()
         ready_queries = [url for url, time in self.query_schedule.items() if time <= now]
 
-        if len(ready_queries) > 1:
-            total_active_queries = await QueryInfo.filter(status=QueryStatus.ACTIVE).count()
-            warning_message = (f"Too many queries being processed at once: {len(ready_queries)} of {total_active_queries} active queries. "
-                               "This may lead to rate limiting.")
-            logging.warning(warning_message)
-            await self.redis_client.publish(GENERIC_WARNING_CHANNEL, json.dumps({
-                "message": warning_message,
-                "reason": "Queries are not evenly distributed across the interval."
-            }))
-
         spread_interval = self.interval / max(len(self.query_schedule), 1)
         last_scheduled_time = max(self.query_schedule.values(), default=now)
 
