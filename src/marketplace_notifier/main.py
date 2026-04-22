@@ -41,18 +41,37 @@ for handler in [file_handler, console_handler]:
     logger.addHandler(handler)
 
 
-async def sync_request_urls_between_shared_db_and_marketplace_db():
-    # this is useful when the pubsub is down while the webserver is still online
-    request_urls_shared_db = await QueryInfo.all().values_list('request_url', flat=True)
-    logging.info("Syncing request URLs between webserver and marketplace DB...")
-    request_urls_marketplace_db = await LatestListingInfoDB.all().values_list('request_url', flat=True)
+async def cleanup_orphaned_latest_listings():
+    """
+    Removes stale rows from LatestListingInfoDB that no longer have a corresponding entry in QueryInfo.
+    This can happen when a query is deleted via the webserver API while the notifier is offline - QueryInfo loses the row,
+    but LatestListingInfoDB still holds the last-seen listing ID for that URL.
+    QueryInfo is the source of truth.
+    LatestListingInfoDB is the notifier's own bookkeeping and should never outlive the query it belongs to.
+    Called once at startup before the main notification loop begins.
+    """
+    logging.info("Syncing LatestListingInfoDB against QueryInfo (source of truth)...")
+    shared_urls = set(await QueryInfo.all().values_list('request_url', flat=True))
+    local_urls = set(await LatestListingInfoDB.all().values_list('request_url', flat=True))
 
-    # the shared DB request_urls are the source of truth
-    request_urls_to_remove = set(request_urls_shared_db) - set(request_urls_marketplace_db)
-    logging.info(f"There are {len(request_urls_to_remove)} too much request_urls being fetched")
-    for request_url in request_urls_to_remove:
-        await QueryInfo.filter(request_url=request_url).delete()
-    logging.info("Syncing complete!")
+    orphaned = local_urls - shared_urls
+    if orphaned:
+        deleted = await LatestListingInfoDB.filter(request_url__in=orphaned).delete()
+        logging.info(
+            f"Deleted {deleted} orphaned LatestListingInfoDB row(s) "
+            f"for URLs no longer in QueryInfo."
+        )
+    else:
+        logging.info("No orphaned rows found.")
+
+    new_queries_count = len(shared_urls - local_urls)
+    if new_queries_count:
+        logging.info(
+            f"{new_queries_count} monitored URL(s) have no latest-listing row yet "
+            "- this is normal for fresh queries."
+        )
+    logging.info("Sync complete.")
+
 
 
 async def run():
@@ -79,7 +98,7 @@ async def run():
     await Tortoise.init(config=CONFIG)
     await Tortoise.generate_schemas()
 
-    await sync_request_urls_between_shared_db_and_marketplace_db()
+    await cleanup_orphaned_latest_listings()
 
     # initialize redis pubsub IPC
     redis_client = redisaio.StrictRedis(host=config["redis_host"])
